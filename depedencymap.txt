@@ -1,0 +1,420 @@
+# FutureHealth — Architecture Plan
+
+## 1. Complete Folder Structure
+
+```
+futurehealth/
+├── public/
+│   └── assets/                    # static illustrations, icons, favicon
+├── src/
+│   ├── main.jsx
+│   ├── App.jsx
+│   ├── index.css
+│   │
+│   ├── pages/
+│   │   ├── LandingPage.jsx
+│   │   ├── AuthPage.jsx
+│   │   ├── DashboardPage.jsx
+│   │   ├── SimulationPage.jsx
+│   │   ├── ResultsPage.jsx
+│   │   ├── HistoryPage.jsx
+│   │   ├── CompareFuturesPage.jsx
+│   │   ├── SDGPage.jsx
+│   │   ├── ProfilePage.jsx
+│   │   └── NotFoundPage.jsx
+│   │
+│   ├── components/
+│   │   ├── layout/
+│   │   │   ├── Navbar.jsx
+│   │   │   ├── Footer.jsx
+│   │   │   ├── PageContainer.jsx
+│   │   │   └── ProtectedRoute.jsx
+│   │   │
+│   │   ├── landing/
+│   │   │   ├── HeroSection.jsx
+│   │   │   ├── ProblemSection.jsx
+│   │   │   ├── HowItWorksSection.jsx
+│   │   │   └── CTASection.jsx
+│   │   │
+│   │   ├── dashboard/
+│   │   │   ├── WelcomeCard.jsx
+│   │   │   ├── HealthScoreSummaryCard.jsx
+│   │   │   ├── ActiveGoalCard.jsx
+│   │   │   ├── LastSimulationCard.jsx
+│   │   │   └── AchievementsStrip.jsx
+│   │   │
+│   │   ├── simulation/
+│   │   │   ├── SimulationForm.jsx
+│   │   │   ├── PersonalInfoStep.jsx
+│   │   │   ├── LifestyleStep.jsx
+│   │   │   ├── GoalStep.jsx
+│   │   │   ├── CommitmentSlider.jsx
+│   │   │   └── StepProgressBar.jsx
+│   │   │
+│   │   ├── results/
+│   │   │   ├── HealthScoreCircle.jsx
+│   │   │   ├── FutureSelfCard.jsx
+│   │   │   ├── HealthAgeBadge.jsx
+│   │   │   ├── BMICard.jsx
+│   │   │   ├── HealthTrendBadge.jsx
+│   │   │   ├── Timeline.jsx
+│   │   │   ├── ProgressChart.jsx
+│   │   │   ├── InsightsPanel.jsx
+│   │   │   ├── RecommendationsList.jsx
+│   │   │   ├── RiskRadar.jsx
+│   │   │   ├── NarrativeReport.jsx
+│   │   │   └── DisclaimerBanner.jsx
+│   │   │
+│   │   ├── whatif/
+│   │   │   ├── WhatIfPanel.jsx
+│   │   │   ├── WhatIfControl.jsx
+│   │   │   └── WhatIfImpactPreview.jsx
+│   │   │
+│   │   ├── compare/
+│   │   │   ├── ScenarioComparison.jsx
+│   │   │   ├── ScenarioCard.jsx
+│   │   │   └── ComparisonSummary.jsx
+│   │   │
+│   │   ├── history/
+│   │   │   ├── HistoryList.jsx
+│   │   │   └── HistoryItemCard.jsx
+│   │   │
+│   │   ├── chatbot/
+│   │   │   ├── ChatWidget.jsx
+│   │   │   ├── ChatBubble.jsx
+│   │   │   ├── ChatInput.jsx
+│   │   │   └── ChatSuggestions.jsx
+│   │   │
+│   │   ├── sdg/
+│   │   │   └── SDGImpactCard.jsx
+│   │   │
+│   │   └── ui/
+│   │       ├── Button.jsx
+│   │       ├── Card.jsx
+│   │       ├── Input.jsx
+│   │       ├── Select.jsx
+│   │       ├── Slider.jsx
+│   │       ├── Badge.jsx
+│   │       ├── Modal.jsx
+│   │       ├── Spinner.jsx
+│   │       ├── Tabs.jsx
+│   │       └── ProgressBar.jsx
+│   │
+│   ├── layouts/
+│   │   └── MainLayout.jsx
+│   │
+│   ├── router/
+│   │   └── AppRouter.jsx
+│   │
+│   ├── context/
+│   │   ├── AuthContext.jsx
+│   │   ├── SimulationContext.jsx
+│   │   └── ToastContext.jsx
+│   │
+│   ├── hooks/
+│   │   ├── useSimulation.js
+│   │   ├── useAuth.js
+│   │   ├── useSimulationHistory.js
+│   │   ├── useWhatIf.js
+│   │   └── useChatbot.js
+│   │
+│   ├── services/
+│   │   ├── supabase.js
+│   │   ├── simulationEngine.js
+│   │   ├── chatbotEngine.js
+│   │   ├── profileService.js
+│   │   └── achievementService.js
+│   │
+│   ├── styles/
+│   │   ├── theme.css
+│   │   └── animations.css
+│   │
+│   └── utils/
+│       ├── constants.js
+│       ├── formatters.js
+│       └── validators.js
+│
+├── .env.example
+├── tailwind.config.js
+├── postcss.config.js
+├── vite.config.js
+└── package.json
+```
+
+---
+
+## 2. Pages — Purpose & Dependencies
+
+| Page | Purpose | Depends On |
+|---|---|---|
+| `LandingPage.jsx` | Public marketing page (hero, problem, how-it-works, CTA) | `landing/*`, `MainLayout` |
+| `AuthPage.jsx` | Login/Register with email + Google | `AuthContext`, `services/supabase.js` |
+| `DashboardPage.jsx` | Authenticated home: score summary, active goal, last simulation, achievements | `AuthContext`, `dashboard/*`, `useSimulationHistory` |
+| `SimulationPage.jsx` | Multi-step form to collect inputs and trigger simulation | `simulation/*`, `useSimulation`, `SimulationContext` |
+| `ResultsPage.jsx` | Full results dashboard (score, future self, timeline, charts, insights, what-if) | `results/*`, `whatif/*`, `chatbot/ChatWidget`, `SimulationContext` |
+| `HistoryPage.jsx` | List of past simulations, link to compare | `history/*`, `useSimulationHistory` |
+| `CompareFuturesPage.jsx` | Side-by-side scenario comparison | `compare/*`, `simulationEngine.compareScenarios` |
+| `SDGPage.jsx` | Static SDG 3 explainer page | `sdg/SDGImpactCard` |
+| `ProfilePage.jsx` | User profile/settings, sign out | `AuthContext`, `profileService` |
+| `NotFoundPage.jsx` | 404 fallback | `MainLayout` |
+
+---
+
+## 3 & 4. Components — Feature Components vs Reusable UI
+
+### Layout
+- **Navbar** — top nav, auth-aware (Login vs Profile/Logout), uses `AuthContext`
+- **Footer** — links, SDG badge
+- **PageContainer** — consistent max-width/padding wrapper
+- **ProtectedRoute** — guards `/dashboard`, `/simulation`, `/results`, `/history`, `/compare`, `/profile`; redirects to `/auth` if no session (reads `AuthContext`)
+
+### Landing (feature, page-specific, low reuse)
+- **HeroSection**, **ProblemSection**, **HowItWorksSection**, **CTASection** — pure presentational, content from `constants.js`
+
+### Dashboard (feature)
+- **WelcomeCard** — greeting + current score badge
+- **HealthScoreSummaryCard** — uses `HealthScoreCircle` (ui-adjacent) + `HealthAgeBadge`
+- **ActiveGoalCard**, **LastSimulationCard** — pull from `useSimulationHistory`
+- **AchievementsStrip** — reads `achievementService`
+
+### Simulation (feature — wizard)
+- **SimulationForm** — orchestrator, holds form state via `useSimulation`, renders steps
+- **PersonalInfoStep**, **LifestyleStep**, **GoalStep** — controlled sub-forms using `ui/Input`, `ui/Select`
+- **CommitmentSlider** — wraps `ui/Slider`
+- **StepProgressBar** — wraps `ui/ProgressBar`
+
+### Results (feature — the core dashboard)
+- **HealthScoreCircle** — large circular score indicator (animated via Framer Motion)
+- **FutureSelfCard** — projected weight, BMI category, health age, trend
+- **HealthAgeBadge**, **BMICard**, **HealthTrendBadge** — small focused display components, reused in Dashboard & Results
+- **Timeline** — interactive vertical/horizontal milestone timeline
+- **ProgressChart** — Recharts line chart of score progression
+- **InsightsPanel** — strengths/weaknesses/dominant factor
+- **RecommendationsList** — actionable recommendations
+- **RiskRadar** — risk levels (Recharts radar or list with `Badge`)
+- **NarrativeReport** — "FutureHealth Analysis" narrative paragraphs
+- **DisclaimerBanner** — reusable across Results, Compare, Chatbot
+
+### What-If (feature — embedded in ResultsPage)
+- **WhatIfPanel** — orchestrator, manages override state via `useWhatIf`
+- **WhatIfControl** — single variable slider/select (e.g., exercise, sleep)
+- **WhatIfImpactPreview** — delta display (score/timeline change), reuses `ProgressChart` & `HealthScoreCircle` in "preview" mode
+
+### Compare Futures (feature)
+- **ScenarioComparison** — orchestrator, two-column layout
+- **ScenarioCard** — single scenario inputs + result summary
+- **ComparisonSummary** — `compareScenarios()` output (scoreDifference, betterScenario, summary)
+
+### History (feature)
+- **HistoryList** — table/grid of past simulations
+- **HistoryItemCard** — date, target, score, link to view/compare
+
+### Chatbot (feature, global)
+- **ChatWidget** — floating button + panel container, manages open/close + conversation state via `useChatbot`
+- **ChatBubble** — single message (user/bot variants)
+- **ChatInput** — text input + send
+- **ChatSuggestions** — quick-reply chips (e.g., "Apa arti skor saya?")
+
+### SDG
+- **SDGImpactCard** — reusable card explaining SDG 3 alignment (used on SDGPage and possibly Landing)
+
+### Reusable UI Primitives (`components/ui/`)
+- **Button** — primary/secondary/ghost variants (replaces ad-hoc `btn-primary`/`btn-secondary` classes)
+- **Card** — base card wrapper (replaces ad-hoc `.card` class, accepts padding/variant props)
+- **Input**, **Select**, **Slider** — form primitives used across Simulation & WhatIf
+- **Badge** — colored pill for categories/risk levels (Sangat Baik/Baik/Sedang/Berisiko, Rendah/Sedang/Tinggi)
+- **Modal** — confirmation dialogs (e.g., delete simulation)
+- **Spinner** — loading states for Supabase calls
+- **Tabs** — used in Results (e.g., Overview / Insights / What-If / Narrative tabs)
+- **ProgressBar** — linear progress (wizard steps, achievement progress)
+
+---
+
+## 5. CSS / Tailwind Files
+
+| File | Purpose |
+|---|---|
+| `tailwind.config.js` | Theme tokens (emerald/sky/amber/slate palette, fonts, radii) — **already exists** |
+| `postcss.config.js` | Tailwind/autoprefixer pipeline — **already exists** |
+| `src/index.css` | Tailwind directives + base layer (`@layer base`) — **already exists**, keep as the single Tailwind entry |
+| `src/styles/theme.css` | `@layer components` — extracted reusable class compositions (`.btn-primary`, `.card`, `.input-field`, `.pill`, etc.) imported into `index.css`. Separating this keeps `index.css` clean as the project grows |
+| `src/styles/animations.css` | Keyframes for score-counter, progress bar fill, future-self reveal, chat bubble entrance — supplements Framer Motion for CSS-only effects |
+
+**Rule:** No component-level CSS files. All styling stays in Tailwind utility classes + the two shared layers above. This avoids CSS sprawl and keeps the design system centralized.
+
+---
+
+## 6. Services
+
+| Service | Responsibility | Used By |
+|---|---|---|
+| `supabase.js` | Client init, auth helpers (`signUpWithEmail`, `signInWithGoogle`, etc.), simulation CRUD — **exists** | `AuthContext`, `useSimulationHistory`, `profileService` |
+| `simulationEngine.js` | Pure deterministic simulation logic — **exists** | `useSimulation`, `useWhatIf`, `CompareFuturesPage`, `useChatbot` |
+| `chatbotEngine.js` | **New.** Rule-based response engine that maps user questions/intents to canned-but-contextual answers, pulling live data from the current `SimulationContext` result (score, insights, recommendations, narrative) to "personalize" replies without an LLM | `useChatbot` |
+| `profileService.js` | **New.** Wraps Supabase `profiles` table CRUD (get/update profile, age/height/weight defaults for pre-filling Simulation form) | `ProfilePage`, `SimulationForm` (prefill) |
+| `achievementService.js` | **New.** Pure logic to evaluate achievement unlock conditions (Future Planner, Health Explorer, Consistency Builder, Future Architect) against history data; optionally persists unlocked achievements to a Supabase `achievements` table | `AchievementsStrip`, `DashboardPage` |
+
+---
+
+## 7. Context / Providers
+
+| Context | State | Purpose |
+|---|---|---|
+| `AuthContext` | `user`, `session`, `loading`, auth methods | Global session awareness; wraps entire `App`; consumed by `ProtectedRoute`, `Navbar`, `ProfilePage` |
+| `SimulationContext` | `currentInputs`, `currentResult`, `whatIfResult`, setters | Holds the "active" simulation in memory so `SimulationPage → ResultsPage` (and `WhatIfPanel`, `ChatWidget`) share state without re-fetching or prop-drilling. Persisted result also saved to Supabase via `useSimulation` |
+| `ToastContext` | queue of toast notifications | Lightweight global feedback (save success, errors, achievement unlocked) — avoids prop drilling alert state into deep components |
+
+**Provider nesting in `App.jsx`:**
+```
+<AuthProvider>
+  <ToastProvider>
+    <SimulationProvider>
+      <AppRouter />
+    </SimulationProvider>
+  </ToastProvider>
+</AuthProvider>
+```
+
+---
+
+## 8. Routing Structure (`AppRouter.jsx`)
+
+```
+/                     → LandingPage (public)
+/auth                 → AuthPage (public, redirect if logged in)
+/dashboard            → DashboardPage (protected)
+/simulation           → SimulationPage (protected)
+/results              → ResultsPage (protected; requires currentResult in SimulationContext, else redirect to /simulation)
+/history              → HistoryPage (protected)
+/history/:id          → ResultsPage in "read-only" mode (reuses ResultsPage with a loaded historical result)
+/compare              → CompareFuturesPage (protected)
+/sdg                  → SDGPage (public)
+/profile              → ProfilePage (protected)
+*                     → NotFoundPage
+```
+
+All routes render inside `MainLayout` (Navbar + Footer + `<Outlet/>` + global `ChatWidget` for authenticated routes).
+
+`ProtectedRoute` wraps protected `<Route>` elements and checks `AuthContext.user`.
+
+---
+
+## 9. State Management Strategy
+
+- **No Redux/Zustand** — app scope doesn't warrant it. React Context + hooks is sufficient and keeps bundle small.
+- **Server state (Supabase)** — fetched via dedicated hooks (`useSimulationHistory`, `useAuth`) using local `useState`/`useEffect` + simple caching (re-fetch on mount/focus). If the app grows, this is the natural seam to introduce **TanStack Query** later (see scalability plan).
+- **Ephemeral UI state** — local `useState` inside components (form steps, modal open/close, chat panel open).
+- **Cross-page simulation state** — `SimulationContext` (in-memory only; the *source of truth* for "what the user is currently looking at"). Supabase is the source of truth for *persisted history*.
+- **What-If state** — isolated in `useWhatIf` (derives from `SimulationContext.currentInputs` + local overrides), never mutates the base result — always recomputed via `runWhatIf()`.
+- **Derived data** — never stored; always computed via `simulationEngine` pure functions from canonical inputs, so results are always consistent and reproducible.
+
+---
+
+## 10. Supabase Integration Plan
+
+**Auth**
+- Email/password + Google OAuth via `supabase.auth`
+- `AuthContext` subscribes to `onAuthStateChange` once at app root
+
+**Tables** (as already scaffolded in `supabase.js` comments)
+- `profiles` — id (FK to auth.users), full_name, age, gender, height_cm, weight_kg
+- `simulations` — id, user_id, inputs (jsonb), results (jsonb), health_score, target, created_at
+- **New:** `achievements` — id, user_id, achievement_key, unlocked_at (for persistence across sessions)
+
+**RLS**: per-user policies on all tables (already defined for profiles/simulations; extend pattern to achievements)
+
+**Data flow**
+1. `SimulationPage` submit → `runSimulation(inputs)` (pure, client-side) → result shown immediately on `ResultsPage` via `SimulationContext` (no network wait for UX)
+2. Async, fire-and-forget: `saveSimulation(userId, inputs, results)` → Supabase
+3. `HistoryPage` / `DashboardPage` → `getSimulationHistory(userId)` on mount via `useSimulationHistory`
+4. `ProfilePage` prefill → `profileService.getProfile(userId)`; edits → `upsert` to `profiles`
+5. Achievement checks run client-side against fetched history (`achievementService.evaluate(history)`) after each new simulation save
+
+---
+
+## 11. What-If Simulator Architecture
+
+```
+ResultsPage
+ └─ WhatIfPanel
+     ├─ reads: SimulationContext.currentInputs (base) + currentResult (base)
+     ├─ local state: overrides = { exerciseFrequency?, sleepHours?, waterIntake?, ... }
+     ├─ WhatIfControl × N  → onChange updates `overrides`
+     ├─ on every override change:
+     │     whatIfResult = runWhatIf(currentInputs, overrides)  // simulationEngine
+     └─ WhatIfImpactPreview
+           ├─ ΔhealthScore = whatIfResult.healthScore - currentResult.healthScore
+           ├─ ΔtimeToGoal
+           └─ mini ProgressChart overlay (base vs. what-if lines, two Recharts series)
+```
+
+- **Stateless engine, stateful panel**: `runWhatIf` is pure; `WhatIfPanel` owns the only mutable state (`overrides`), debounced (~150ms) before recompute to avoid jank on slider drag.
+- **"Apply this scenario"** button promotes `overrides` into a *new* simulation: pushes `{ ...currentInputs, ...overrides }` to `SimulationContext`, re-runs `runSimulation`, optionally saves to history — bridges What-If → Compare Futures naturally (the old result becomes "Scenario A", the new one "Scenario B").
+
+---
+
+## 12. AI Chatbot Architecture
+
+**Design goal:** feel like a contextual health assistant, but remain deterministic/rule-based (consistent with `simulationEngine`'s "AI-like, not AI" philosophy) — no external LLM dependency required, though the API is structured so one could be swapped in later.
+
+```
+ChatWidget (global, mounted in MainLayout for authenticated routes)
+ ├─ useChatbot hook
+ │    ├─ state: messages[], isOpen, isTyping
+ │    ├─ reads: SimulationContext.currentResult (for personalized answers)
+ │    └─ sendMessage(text) → chatbotEngine.respond(text, context)
+ ├─ ChatSuggestions — quick intents: "Apa arti skor saya?", "Bagaimana cara meningkatkan tidur?", "Jelaskan risiko saya"
+ ├─ ChatBubble × N (renders messages)
+ └─ ChatInput
+```
+
+**`chatbotEngine.js`** (intent-matching, rule-based):
+- `respond(message, simulationResult)`:
+  1. Normalize/keyword-match message against intent categories: score explanation, recommendations, risks, BMI/health age, timeline, SDG info, general greeting/fallback
+  2. For data-driven intents, pull live values from `simulationResult` (e.g., "Skor kesehatan Anda saat ini adalah {currentScore}, kategori {category}...")
+  3. For knowledge intents (SDG, app usage), return curated static copy from `constants.js`
+  4. Fallback: suggest using `WhatIfPanel` or rephrasing
+- Fully synchronous, no network calls → instant responses, zero cost, zero external dependency, but interface (`respond(message, context) → Promise<string>`) is async-shaped so a future LLM backend (Supabase Edge Function) can be substituted without touching UI components.
+
+---
+
+## 13. Results Dashboard Architecture
+
+```
+ResultsPage
+ ├─ DisclaimerBanner (always visible, top)
+ ├─ Header row
+ │    ├─ HealthScoreCircle (futureScore, category)
+ │    ├─ HealthAgeBadge / BMICard / HealthTrendBadge (compact stat row)
+ ├─ Tabs (ui/Tabs)
+ │    ├─ Tab: Overview
+ │    │    ├─ FutureSelfCard
+ │    │    └─ Timeline (milestones)
+ │    ├─ Tab: Progress
+ │    │    └─ ProgressChart (Recharts, timeline data)
+ │    ├─ Tab: Insights
+ │    │    ├─ InsightsPanel (strengths/weaknesses/dominant factor)
+ │    │    ├─ RecommendationsList
+ │    │    └─ RiskRadar
+ │    ├─ Tab: Narrative
+ │    │    └─ NarrativeReport (FutureHealth Analysis paragraphs)
+ │    └─ Tab: What-If
+ │         └─ WhatIfPanel
+ └─ ChatWidget (floating, global)
+```
+
+- All tab content is driven by a **single `currentResult` object** from `runSimulation()` — no re-fetching between tabs, just different views of the same data structure. This guarantees internal consistency (score on Overview always matches Progress chart's final point, etc.)
+- `HistoryPage → ResultsPage` (read-only mode): same component tree, but `WhatIfPanel` and "save" actions hidden via a `readOnly` prop, and `currentResult` is loaded from a history record's stored `results` jsonb instead of `SimulationContext`.
+
+---
+
+## 14. Future Scalability Plan
+
+1. **Server-state library**: introduce TanStack Query for `useSimulationHistory`/`useAuth` once caching/pagination of history grows (e.g., infinite scroll on `HistoryPage`).
+2. **Chatbot upgrade path**: `chatbotEngine.respond()` signature already async — can be backed by a Supabase Edge Function calling an LLM with `simulationResult` as context, without changing `useChatbot` or UI.
+3. **i18n**: all user-facing strings currently in Indonesian and centralized in `simulationEngine.js` (messages) and `constants.js` (UI copy) — straightforward to extract into `locales/id.json` / `locales/en.json` with `react-i18next` later.
+4. **Design system growth**: `components/ui/` is isolated enough to extract into a separate internal package if FutureHealth spawns sibling apps (e.g., admin dashboard).
+5. **Achievements expansion**: `achievementService.js` uses a declarative rule list (`{ key, condition: (history) => bool }`) — new achievements are just new rule entries, no UI changes needed beyond `AchievementsStrip` iterating the list.
+6. **Simulation engine versioning**: as scoring models evolve, store an `engine_version` field alongside saved `simulations` rows so historical results remain reproducible/explainable even after engine tuning.
+7. **Testing**: `simulationEngine.js`'s pure functions are ideal for unit tests (Vitest) — prioritize coverage there first, then component tests (React Testing Library) for `SimulationForm` and `WhatIfPanel` logic.
+8. **Code-splitting**: lazy-load `CompareFuturesPage`, `HistoryPage`, and `ChatWidget` via `React.lazy` once bundle size becomes a concern — router structure above already maps cleanly to route-based splitting.
