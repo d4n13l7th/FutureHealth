@@ -41,13 +41,13 @@ function SimulationForm({ onSubmit, isSubmitting }) {
     gender: 'Perempuan',
     height: 165,
     weight: 60,
-    sleepHours: '5-6 jam', // Ganti dari SIMULATION_OPTIONS
-    waterIntake: 'Sedang', 
-    exerciseFrequency: '1-2 kali per minggu',
-    screenTime: '5-8 jam',
+    sleepHours: SIMULATION_OPTIONS.sleepHours[1], // '5-6 jam'
+    waterIntake: SIMULATION_OPTIONS.waterIntake[1], // 'Sedang' 
+    exerciseFrequency: SIMULATION_OPTIONS.exerciseFrequency[1], // '1-2 kali per minggu'
+    screenTime: SIMULATION_OPTIONS.screenTime[2], // '5-8 jam'
     stressLevel: 6,
-    dietQuality: 'Cukup',
-    target: 'Meningkatkan kebugaran',
+    dietQuality: SIMULATION_OPTIONS.dietQuality[1], // 'Cukup'
+    target: SIMULATION_OPTIONS.targets[2], // 'Meningkatkan kebugaran'
     commitmentLevel: 7,
   }
 
