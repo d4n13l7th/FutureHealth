@@ -1,5 +1,3 @@
-// FILE: src/hooks/useSimulationHistory.js
-
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { getSimulationHistory } from '../services/supabase.js'
