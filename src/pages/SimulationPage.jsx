@@ -2,79 +2,8 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AlertCircle, Loader2, Sparkles } from 'lucide-react'
 import { useSimulation } from '../hooks/useSimulation.js'
-
-// ----------------------------------------------------------------
-// TEMPORARY MOCK COMPONENTS
-// ----------------------------------------------------------------
-// Minimal placeholders so SimulationPage compiles and is fully
-// testable end-to-end before their real implementations exist.
-// Each will be replaced by an import from its architecture-approved
-// location:
-//
-//   import PageContainer from '../components/layout/PageContainer.jsx'
-//   import SimulationForm from '../components/simulation/SimulationForm.jsx'
-//
-// TODO: Remove these mocks once the real components are generated.
-// ----------------------------------------------------------------
-
-/** TODO: replace with components/layout/PageContainer.jsx */
-function PageContainer({ children, className = '' }) {
-  return (
-    <div className={`mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8 ${className}`}>
-      {children}
-    </div>
-  )
-}
-
-/**
- * TODO: replace with components/simulation/SimulationForm.jsx
- *
- * Minimal mock of the real multi-step SimulationForm. Submits a
- * representative "dummy" inputs object matching the exact shape
- * simulationEngine.runSimulation() expects, so the page can be
- * exercised end-to-end (engine -> context -> results) before the
- * real form exists.
- */
-function SimulationForm({ onSubmit, isSubmitting }) {
-  const dummyInputs = {
-    age: 24,
-    gender: 'Perempuan',
-    height: 165,
-    weight: 60,
-    sleepHours: SIMULATION_OPTIONS.sleepHours[1], // '5-6 jam'
-    waterIntake: SIMULATION_OPTIONS.waterIntake[1], // 'Sedang' 
-    exerciseFrequency: SIMULATION_OPTIONS.exerciseFrequency[1], // '1-2 kali per minggu'
-    screenTime: SIMULATION_OPTIONS.screenTime[2], // '5-8 jam'
-    stressLevel: 6,
-    dietQuality: SIMULATION_OPTIONS.dietQuality[1], // 'Cukup'
-    target: SIMULATION_OPTIONS.targets[2], // 'Meningkatkan kebugaran'
-    commitmentLevel: 7,
-  }
-
-  return (
-    <div className="card flex flex-col items-center gap-4 py-12 text-center">
-      <p className="max-w-md text-sm text-slate-500">
-        Form simulasi lengkap (informasi pribadi, gaya hidup, target kesehatan,
-        dan tingkat komitmen) akan ditampilkan di sini. Untuk saat ini, gunakan
-        data contoh di bawah untuk menjalankan simulasi.
-      </p>
-
-      <button
-        type="button"
-        onClick={() => onSubmit(dummyInputs)}
-        disabled={isSubmitting}
-        className="btn-primary disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isSubmitting && <Loader2 size={18} className="animate-spin" />}
-        Jalankan Simulasi
-      </button>
-    </div>
-  )
-}
-
-// ----------------------------------------------------------------
-// SimulationPage
-// ----------------------------------------------------------------
+import SimulationForm from '../components/simulation/SimulationForm.jsx'
+import PageContainer from '../components/layout/PageContainer.jsx'
 
 /**
  * SimulationPage

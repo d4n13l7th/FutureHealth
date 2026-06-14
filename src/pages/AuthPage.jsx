@@ -1,5 +1,3 @@
-// FILE: src/pages/AuthPage.jsx
-
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react'
