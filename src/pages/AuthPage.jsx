@@ -1,26 +1,28 @@
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+// FILE: src/pages/AuthPage.jsx
+
+import { useState } from 'react'
+import { Navigate } from 'react-router-dom'
 import { Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
 /**
  * AuthPage
  * ----------------------------------------------------------------
- * Public authentication portal at "/auth". Toggles between
- * "Masuk" (sign in) and "Daftar" (sign up), plus a Google OAuth
- * option, via AuthContext.
+ * Public authentication page ("/auth"). Self-contained: toggles
+ * between "Masuk" (sign in) and "Daftar" (sign up), plus Google
+ * OAuth, via AuthContext.
  *
- * - On successful sign in/up, redirects to /dashboard.
- * - If a user is already authenticated, redirects straight to
- *   /dashboard (no point showing the form again).
+ * - While AuthContext.loading is true, shows a centered spinner.
+ * - If `user` exists, redirects to /dashboard via <Navigate replace>.
+ * - On successful sign in/up, AuthContext's onAuthStateChange
+ * updates `user`, triggering the <Navigate> branch automatically.
  * - Errors from Supabase are surfaced inline.
  * ----------------------------------------------------------------
  */
 export default function AuthPage() {
-  const { user, signIn, signUp, signInWithGoogle } = useAuth()
-  const navigate = useNavigate()
+  const { user, loading, signIn, signUp, signInWithGoogle } = useAuth()
 
-  const [mode, setMode] = useState('signin') // 'signin' | 'signup'
+  const [isSignUp, setIsSignUp] = useState(false)
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -28,18 +30,22 @@ export default function AuthPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  const isSignUp = mode === 'signup'
+  // Wait for initial session resolution
+  if (loading) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <Loader2 size={32} className="animate-spin text-emerald-500" />
+      </div>
+    )
+  }
 
-  // If the user is already authenticated, don't show the auth
-  // form — send them straight to the dashboard.
-  useEffect(() => {
-    if (user) {
-      navigate('/dashboard', { replace: true })
-    }
-  }, [user, navigate])
+  // Already authenticated -> redirect immediately.
+  if (user) {
+    return <Navigate to="/dashboard" replace />
+  }
 
-  function switchMode(nextMode) {
-    setMode(nextMode)
+  function switchMode() {
+    setIsSignUp((prev) => !prev)
     setError(null)
   }
 
@@ -55,10 +61,7 @@ export default function AuthPage() {
 
       if (authError) {
         setError(mapAuthError(authError))
-        return
       }
-
-      navigate('/dashboard', { replace: true })
     } catch (err) {
       setError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
     } finally {
@@ -76,8 +79,6 @@ export default function AuthPage() {
         setError(mapAuthError(authError))
         setIsGoogleLoading(false)
       }
-      // On success, Supabase redirects the browser to Google and
-      // back — no further action needed here.
     } catch (err) {
       setError('Tidak dapat memulai proses masuk dengan Google.')
       setIsGoogleLoading(false)
@@ -120,7 +121,7 @@ export default function AuthPage() {
             ) : (
               <GoogleIcon />
             )}
-            Lanjutkan dengan Google
+            Masuk dengan Google
           </button>
 
           {/* Divider */}
@@ -217,7 +218,7 @@ export default function AuthPage() {
             {isSignUp ? 'Sudah punya akun?' : 'Belum punya akun?'}{' '}
             <button
               type="button"
-              onClick={() => switchMode(isSignUp ? 'signin' : 'signup')}
+              onClick={switchMode}
               className="font-semibold text-emerald-600 hover:text-emerald-700"
             >
               {isSignUp ? 'Masuk' : 'Daftar'}
@@ -230,9 +231,7 @@ export default function AuthPage() {
 }
 
 /**
- * Maps a raw Supabase auth error into a user-friendly Indonesian
- * message. Falls back to the original message for cases not
- * explicitly handled.
+ * Maps a raw Supabase auth error into a user-friendly Indonesian message.
  */
 function mapAuthError(authError) {
   const message = authError?.message ?? ''
@@ -257,22 +256,10 @@ function mapAuthError(authError) {
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-      <path
-        fill="#FFC107"
-        d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
-      />
-      <path
-        fill="#FF3D00"
-        d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
-      />
-      <path
-        fill="#4CAF50"
-        d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
-      />
-      <path
-        fill="#1976D2"
-        d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
-      />
+      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
+      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
+      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
+      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
     </svg>
   )
 }

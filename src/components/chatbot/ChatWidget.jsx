@@ -1,87 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageSquare, X, Send, Bot, User, Loader2 } from 'lucide-react'
+import { MessageSquare, X, Bot, Loader2 } from 'lucide-react'
 import { useChatbot } from '../../hooks/useChatbot.js'
-
-// ----------------------------------------------------------------
-// TEMPORARY MOCK COMPONENTS
-// ----------------------------------------------------------------
-// Minimal but functional placeholders so ChatWidget compiles and is
-// fully interactive before their real implementations exist. Each
-// will be replaced by an import from its architecture-approved
-// location under components/chatbot/:
-//
-//   import ChatBubble from './ChatBubble.jsx'   (renamed from ChatMessage)
-//   import ChatInput from './ChatInput.jsx'
-//
-// TODO: Remove these mocks once the real components are generated.
-// ----------------------------------------------------------------
-
-/** TODO: replace with components/chatbot/ChatBubble.jsx (renamed from ChatMessage) */
-function ChatMessage({ message }) {
-  const isUser = message.sender === 'user'
-
-  return (
-    <div className={`flex items-start gap-2 ${isUser ? 'flex-row-reverse' : ''}`}>
-      <div
-        className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-          isUser ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'
-        }`}
-      >
-        {isUser ? <User size={16} /> : <Bot size={16} />}
-      </div>
-      <div
-        className={`max-w-[75%] rounded-2xl px-4 py-2 text-sm leading-relaxed ${
-          isUser ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-700'
-        }`}
-      >
-        {message.text}
-      </div>
-    </div>
-  )
-}
-
-/** TODO: replace with components/chatbot/ChatInput.jsx */
-function ChatInput({ onSend, disabled }) {
-  const [value, setValue] = useState('')
-
-  function handleSend() {
-    const trimmed = value.trim()
-    if (!trimmed || disabled) return
-
-    onSend(trimmed)
-    setValue('')
-  }
-
-  function handleKeyDown(event) {
-    if (event.key === 'Enter') {
-      event.preventDefault()
-      handleSend()
-    }
-  }
-
-  return (
-    <div className="flex items-center gap-2">
-      <input
-        type="text"
-        value={value}
-        onChange={(event) => setValue(event.target.value)}
-        onKeyDown={handleKeyDown}
-        disabled={disabled}
-        placeholder="Tulis pertanyaan Anda..."
-        className="input-field"
-      />
-      <button
-        type="button"
-        onClick={handleSend}
-        disabled={disabled || !value.trim()}
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-500 text-white transition-colors hover:bg-emerald-600 disabled:cursor-not-allowed disabled:opacity-50"
-        aria-label="Kirim pesan"
-      >
-        <Send size={18} />
-      </button>
-    </div>
-  )
-}
+import ChatBubble from './ChatBubble.jsx'
+import ChatInput from './ChatInput.jsx'
 
 // ----------------------------------------------------------------
 // ChatWidget
@@ -95,9 +16,9 @@ function ChatInput({ onSend, disabled }) {
  *
  * - Closed: a circular trigger button toggling `isOpen`.
  * - Open: a chat window with header (title + close), scrollable
- *   message list (auto-scrolling to the latest message via
- *   messagesEndRef), a typing indicator while the assistant is
- *   "thinking", and a text input footer.
+ * message list (auto-scrolling to the latest message via
+ * messagesEndRef), a typing indicator while the assistant is
+ * "thinking", and a text input footer.
  *
  * State and response generation are delegated to useChatbot(),
  * which in turn uses chatbotEngine.generateChatbotResponse() with
@@ -108,12 +29,22 @@ function ChatInput({ onSend, disabled }) {
  */
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false)
+  const [inputText, setInputText] = useState('')
   const { messages, isTyping, sendMessage } = useChatbot()
   const messagesEndRef = useRef(null)
 
+  // Auto-scroll to bottom when new messages arrive or typing status changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages, isTyping])
+
+  const handleSendMessage = () => {
+    const trimmed = inputText.trim()
+    if (!trimmed) return
+    
+    sendMessage(trimmed)
+    setInputText('')
+  }
 
   if (!isOpen) {
     return (
@@ -152,7 +83,7 @@ export default function ChatWidget() {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="flex flex-col gap-3">
           {messages.map((message) => (
-            <ChatMessage key={message.id} message={message} />
+            <ChatBubble key={message.id} message={message} />
           ))}
 
           {isTyping && (
@@ -173,7 +104,12 @@ export default function ChatWidget() {
 
       {/* Footer */}
       <div className="border-t border-slate-100 p-3">
-        <ChatInput onSend={sendMessage} disabled={isTyping} />
+        <ChatInput 
+          inputText={inputText}
+          setInputText={setInputText}
+          handleSendMessage={handleSendMessage}
+          isLoading={isTyping}
+        />
       </div>
     </div>
   )
