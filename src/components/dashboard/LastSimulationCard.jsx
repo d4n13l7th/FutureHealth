@@ -1,5 +1,3 @@
-// FILE: src/components/dashboard/LastSimulationCard.jsx
-
 import { Link } from 'react-router-dom'
 import { Calendar, History } from 'lucide-react'
 

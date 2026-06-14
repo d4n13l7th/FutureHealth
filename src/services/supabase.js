@@ -100,3 +100,15 @@ export async function getSimulationHistory(userId) {
     .eq('user_id', userId)
     .order('created_at', { ascending: false })
 }
+
+/**
+ * Fetches a single simulation record by its id. Used by
+ * useSimulationRecord for the /history/:id read-only view.
+ */
+export async function getSimulationById(id) {
+  return supabase
+    .from('simulations')
+    .select('*')
+    .eq('id', id)
+    .single()
+}

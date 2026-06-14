@@ -19,25 +19,6 @@ import EmptyDashboardState from '../components/dashboard/EmptyDashboardState.jsx
 import QuickStatsRow from '../components/dashboard/QuickStatsRow.jsx'
 import LastSimulationCard from '../components/dashboard/LastSimulationCard.jsx'
 
-// ----------------------------------------------------------------
-// TEMPORARY MOCK COMPONENTS
-// ----------------------------------------------------------------
-// Minimal but content-accurate implementations so DashboardPage
-// compiles and renders meaningfully before extraction into their
-// architecture-approved locations:
-//
-//   import EmptyDashboardState from '../components/dashboard/EmptyDashboardState.jsx'
-//   import WelcomeBanner from '../components/dashboard/WelcomeCard.jsx'
-//   import QuickStatsRow from '../components/dashboard/QuickStatsRow.jsx'
-//   import LastSimulationCard from '../components/dashboard/LastSimulationCard.jsx'
-//
-// TODO: Remove these mocks once the real components are generated. status:DONE
-// ----------------------------------------------------------------
-
-// ----------------------------------------------------------------
-// DashboardPage
-// ----------------------------------------------------------------
-
 /**
  * DashboardPage
  * ----------------------------------------------------------------
