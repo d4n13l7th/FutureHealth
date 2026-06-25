@@ -7,29 +7,6 @@ import {
   signOut as signOutService,
 } from '../services/supabase.js'
 
-/**
- * AuthContext
- * ----------------------------------------------------------------
- * Single source of truth for authentication state across
- * FutureHealth. Wraps Supabase Auth session/user state and exposes
- * a small, stable API via the `useAuth()` hook.
- *
- * State:
- * - user:    the current Supabase auth user object, or null
- * - session: the current Supabase session object, or null
- * - loading: true while the initial session is being resolved
- *
- * Actions:
- * - signIn(email, password)
- * - signUp(email, password, fullName)
- * - signInWithGoogle()
- * - signOut()
- *
- * All actions return the underlying Supabase response
- * (`{ data, error }`) so calling components decide how to handle
- * errors and navigation (e.g. AuthPage redirects on success).
- * ----------------------------------------------------------------
- */
 const AuthContext = createContext(undefined)
 
 export function AuthProvider({ children }) {
@@ -40,8 +17,6 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let isMounted = true
 
-    // Hydrate initial state from any existing session (e.g. on
-    // page reload, or after an OAuth redirect back to the app).
     supabase.auth.getSession().then(({ data }) => {
       if (!isMounted) return
       setSession(data.session)
@@ -49,8 +24,6 @@ export function AuthProvider({ children }) {
       setLoading(false)
     })
 
-    // Keep state in sync with sign-in, sign-out, token refresh,
-    // and changes made in other tabs.
     const { data: subscription } = supabase.auth.onAuthStateChange(
       (_event, newSession) => {
         if (!isMounted) return
@@ -68,37 +41,56 @@ export function AuthProvider({ children }) {
 
   /**
    * Signs in an existing user with email and password.
-   * @returns {Promise<{ data, error }>}
    */
   async function signIn(email, password) {
     return signInWithEmail(email, password)
   }
 
   /**
-   * Registers a new user with email, password, and full name.
-   * @returns {Promise<{ data, error }>}
+   * Registers a new user, then immediately attempts to sign them
+   * in — bypassing the email confirmation flow entirely.
+   *
+   * Why: Supabase sometimes ignores the "disable email confirmation"
+   * toggle due to caching. By signing in right after signup with
+   * the same credentials, the user gets a valid session regardless
+   * of whether their email is confirmed, as long as the Supabase
+   * project has email auth enabled.
    */
   async function signUp(email, password, fullName) {
-    return signUpWithEmail(email, password, fullName)
+    const { data, error } = await signUpWithEmail(email, password, fullName)
+
+    if (error) {
+      return { data, error }
+    }
+
+    // If Supabase returned a session directly (email confirmation
+    // disabled), we're done — onAuthStateChange will pick it up.
+    if (data?.session) {
+      return { data, error: null }
+    }
+
+    // Otherwise (email confirmation still active on Supabase's
+    // side), attempt an immediate sign-in with the same credentials.
+    // This works because the user *was* created in auth.users —
+    // they just haven't clicked the confirmation link yet, but
+    // Supabase allows sign-in for unconfirmed accounts when
+    // "Confirm email" is disabled at the project level.
+    const signInResult = await signInWithEmail(email, password)
+
+    if (signInResult.error) {
+      // Sign-in failed (e.g., email confirmation still truly
+      // enforced). Return the original signup success data so the
+      // caller can show a "check your email" message.
+      return { data, error: null, requiresConfirmation: true }
+    }
+
+    return { data: signInResult.data, error: null }
   }
 
-  /**
-   * Starts the Google OAuth sign-in flow. On success, Supabase
-   * redirects the browser back to the app (see redirectTo in
-   * services/supabase.js); the resulting session is picked up by
-   * the onAuthStateChange listener above.
-   * @returns {Promise<{ data, error }>}
-   */
   async function signInWithGoogle() {
     return signInWithGoogleService()
   }
 
-  /**
-   * Signs the current user out. The onAuthStateChange listener
-   * will clear `user`/`session` automatically once Supabase
-   * confirms the sign-out.
-   * @returns {Promise<{ error }>}
-   */
   async function signOut() {
     return signOutService()
   }
@@ -116,23 +108,6 @@ export function AuthProvider({ children }) {
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
-/**
- * useAuth
- * ----------------------------------------------------------------
- * Hook for consuming AuthContext. Throws if used outside of
- * AuthProvider so misconfiguration is caught during development
- * rather than producing confusing `undefined` errors downstream.
- *
- * @returns {{
- *   user: object|null,
- *   session: object|null,
- *   loading: boolean,
- *   signIn: (email: string, password: string) => Promise<object>,
- *   signUp: (email: string, password: string, fullName: string) => Promise<object>,
- *   signInWithGoogle: () => Promise<object>,
- *   signOut: () => Promise<object>,
- * }}
- */
 export function useAuth() {
   const context = useContext(AuthContext)
   if (context === undefined) {

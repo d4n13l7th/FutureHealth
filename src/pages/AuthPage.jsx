@@ -1,24 +1,8 @@
-// FILE: src/pages/AuthPage.jsx
-
 import { useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { Mail, Lock, User, AlertCircle, Loader2 } from 'lucide-react'
+import { Navigate, Link } from 'react-router-dom'
+import { Mail, Lock, User, Loader2, Chrome, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
-/**
- * AuthPage
- * ----------------------------------------------------------------
- * Public authentication page ("/auth"). Self-contained: toggles
- * between "Masuk" (sign in) and "Daftar" (sign up), plus Google
- * OAuth, via AuthContext.
- *
- * - While AuthContext.loading is true, shows a centered spinner.
- * - If `user` exists, redirects to /dashboard via <Navigate replace>.
- * - On successful sign in/up, AuthContext's onAuthStateChange
- * updates `user`, triggering the <Navigate> branch automatically.
- * - Errors from Supabase are surfaced inline.
- * ----------------------------------------------------------------
- */
 export default function AuthPage() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth()
 
@@ -27,10 +11,10 @@ export default function AuthPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
+  const [successMessage, setSuccessMessage] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isGoogleLoading, setIsGoogleLoading] = useState(false)
 
-  // Wait for initial session resolution
   if (loading) {
     return (
       <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
@@ -39,7 +23,6 @@ export default function AuthPage() {
     )
   }
 
-  // Already authenticated -> redirect immediately.
   if (user) {
     return <Navigate to="/dashboard" replace />
   }
@@ -47,20 +30,36 @@ export default function AuthPage() {
   function switchMode() {
     setIsSignUp((prev) => !prev)
     setError(null)
+    setSuccessMessage(null)
   }
 
   async function handleSubmit(event) {
     event.preventDefault()
     setError(null)
+    setSuccessMessage(null)
     setIsSubmitting(true)
 
     try {
-      const { error: authError } = isSignUp
-        ? await signUp(email, password, fullName)
-        : await signIn(email, password)
+      if (isSignUp) {
+        const result = await signUp(email, password, fullName)
 
-      if (authError) {
-        setError(mapAuthError(authError))
+        if (result.error) {
+          setError(mapAuthError(result.error))
+          return
+        }
+
+        if (result.requiresConfirmation) {
+          setSuccessMessage(
+            'Akun berhasil dibuat! Silakan cek email Anda untuk konfirmasi, lalu kembali ke halaman ini untuk masuk.'
+          )
+          setIsSignUp(false)
+          return
+        }
+      } else {
+        const { error: authError } = await signIn(email, password)
+        if (authError) {
+          setError(mapAuthError(authError))
+        }
       }
     } catch (err) {
       setError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
@@ -71,6 +70,7 @@ export default function AuthPage() {
 
   async function handleGoogleSignIn() {
     setError(null)
+    setSuccessMessage(null)
     setIsGoogleLoading(true)
 
     try {
@@ -89,7 +89,6 @@ export default function AuthPage() {
     <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
         <div className="card">
-          {/* Header */}
           <div className="mb-6 text-center">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">
               {isSignUp ? 'Buat Akun FutureHealth' : 'Selamat Datang Kembali'}
@@ -109,6 +108,14 @@ export default function AuthPage() {
             </div>
           )}
 
+          {/* Success banner */}
+          {successMessage && (
+            <div className="mb-4 flex items-start gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              <CheckCircle size={18} className="mt-0.5 shrink-0" />
+              <span>{successMessage}</span>
+            </div>
+          )}
+
           {/* Google sign-in */}
           <button
             type="button"
@@ -119,12 +126,11 @@ export default function AuthPage() {
             {isGoogleLoading ? (
               <Loader2 size={18} className="animate-spin" />
             ) : (
-              <GoogleIcon />
+              <Chrome size={18} />
             )}
             Masuk dengan Google
           </button>
 
-          {/* Divider */}
           <div className="my-6 flex items-center gap-3">
             <div className="h-px flex-1 bg-slate-100" />
             <span className="text-xs font-medium uppercase tracking-wide text-slate-400">
@@ -133,7 +139,6 @@ export default function AuthPage() {
             <div className="h-px flex-1 bg-slate-100" />
           </div>
 
-          {/* Email/password form */}
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             {isSignUp && (
               <div>
@@ -224,42 +229,34 @@ export default function AuthPage() {
               {isSignUp ? 'Masuk' : 'Daftar'}
             </button>
           </p>
+
+          {/* Guest mode */}
+          <div className="mt-4 border-t border-slate-100 pt-4 text-center">
+            <p className="text-xs text-slate-400">
+              Hanya ingin mencoba?{' '}
+              <Link
+                to="/simulation"
+                className="font-medium text-slate-500 underline decoration-slate-400 underline-offset-2 hover:text-emerald-600 hover:decoration-emerald-500"
+              >
+                Lanjutkan sebagai tamu
+              </Link>
+            </p>
+          </div>
         </div>
       </div>
     </div>
   )
 }
 
-/**
- * Maps a raw Supabase auth error into a user-friendly Indonesian message.
- */
 function mapAuthError(authError) {
   const message = authError?.message ?? ''
-
-  if (message.includes('Invalid login credentials')) {
+  if (message.includes('Invalid login credentials'))
     return 'Email atau kata sandi salah. Silakan coba lagi.'
-  }
-  if (message.includes('User already registered')) {
+  if (message.includes('User already registered'))
     return 'Email ini sudah terdaftar. Silakan masuk.'
-  }
-  if (message.includes('Password should be at least')) {
+  if (message.includes('Password should be at least'))
     return 'Kata sandi minimal harus 6 karakter.'
-  }
-  if (message.includes('Email not confirmed')) {
-    return 'Silakan konfirmasi email Anda terlebih dahulu sebelum masuk.'
-  }
-
+  if (message.includes('Email not confirmed'))
+    return 'Email belum dikonfirmasi. Coba daftar ulang atau hubungi support.'
   return message || 'Terjadi kesalahan. Silakan coba lagi.'
-}
-
-/** Inline Google "G" logo (multi-color, no external asset needed). */
-function GoogleIcon() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-      <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z" />
-      <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z" />
-      <path fill="#4CAF50" d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 35.091 26.715 36 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z" />
-      <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z" />
-    </svg>
-  )
 }

@@ -66,13 +66,13 @@ export default function DashboardPage() {
     <PageContainer className="py-12">
       {hasHistory ? (
         <div className="flex flex-col gap-6">
-          <WelcomeBanner user={user} />
+          <WelcomeCard user={user} />
           <QuickStatsRow latest={latest} />
           <LastSimulationCard latest={latest} />
         </div>
       ) : (
         <div className="flex flex-col gap-6">
-          <WelcomeBanner user={user} />
+          <WelcomeCard user={user} />
           <EmptyDashboardState />
         </div>
       )}
