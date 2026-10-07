@@ -28,7 +28,7 @@ function formatDate(createdAt) {
  * full detail view at /history/:id (ResultsPage in read-only mode).
  *
  * Reads from a simulation history record (`simulation`), the shape
- * persisted by services/supabase.js's saveSimulation:
+ * persisted by services/backend.js's saveSimulation:
  *   { id, created_at, target, inputs: { target, ... },
  *     results: { healthScore, ... } }
  *

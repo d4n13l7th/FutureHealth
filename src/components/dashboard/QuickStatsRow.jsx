@@ -18,7 +18,7 @@ function formatNumber(value) {
  * metrics: Skor Kesehatan, BMI, Usia Kesehatan, and Target Aktif.
  *
  * Reads from a simulation history record (`latest`), which has the
- * shape persisted by services/supabase.js's saveSimulation:
+ * shape persisted by services/backend.js's saveSimulation:
  *   { results: { healthScore, bmi, bmiCategory, healthAge, ... },
  *     target, inputs: { target, ... }, created_at, ... }
  *

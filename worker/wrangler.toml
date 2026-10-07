@@ -1,0 +1,14 @@
+name = "futurehealth-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+account_id = "d63c68e3ccd179255204e549338ba3e3"
+workers_dev = true
+
+[[d1_databases]]
+binding = "DB"
+database_name = "futurehealth-db"
+database_id = "29aa61d1-8b3c-4923-8978-b35f214ba7e0"
+migrations_dir = "migrations"
+
+# [observability]
+# enabled = true

@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSimulationContext } from '../context/SimulationContext.jsx'
 import { runSimulation } from '../services/simulationEngine.js'
-import { saveSimulation } from '../services/supabase.js'
+import { saveSimulation } from '../services/backend.js'
 
 /**
  * useSimulation
@@ -12,7 +12,7 @@ import { saveSimulation } from '../services/supabase.js'
  *
  *   1. simulationEngine.js  — pure, deterministic calculation
  *   2. SimulationContext     — in-memory "active simulation" state
- *   3. services/supabase.js  — persistence (simulation history)
+ *   3. services/backend.js  — persistence (simulation history)
  *
  * Usage (in SimulationPage):
  *   const { runAndSaveSimulation, isSimulating } = useSimulation()

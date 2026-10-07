@@ -5,14 +5,12 @@
  * against simulation history data. Uses a declarative rule list
  * so new achievements are just new entries — no UI changes needed.
  *
- * Optionally persists unlocked achievements to a Supabase
- * `achievements` table (if available).
+ * No persistence backend in the current version — achievements are
+ * evaluated entirely client-side.
  *
  * Used by: AchievementsStrip, DashboardPage
  * ----------------------------------------------------------------
  */
-
-import { supabase } from './supabase.js'
 
 // ----------------------------------------------------------------
 // Achievement definitions (declarative)
@@ -61,7 +59,7 @@ const ACHIEVEMENT_RULES = [
  * Evaluates all achievement rules against the provided simulation
  * history and returns the full list with unlock status.
  *
- * @param {Array} history - Array of simulation records from Supabase.
+ * @param {Array} history - Array of simulation records from the backend API.
  * @returns {Array<{ key, label, description, icon, unlocked: boolean }>}
  */
 export function evaluateAchievements(history = []) {
@@ -99,26 +97,18 @@ export function getAchievementProgress(history = []) {
 }
 
 /**
- * Persists a newly unlocked achievement to the Supabase
- * `achievements` table. Silently no-ops if the table doesn't exist
- * or the insert fails (achievements are a bonus feature, not
- * mission-critical).
+ * Intentionally a no-op in the current Cloudflare backend: there is
+ * no `achievements` table, so unlocked achievements are only shown
+ * in-memory from the simulation history. Kept as an async function
+ * so callers (e.g. DashboardPage) work unchanged.
  *
  * @param {string} userId
  * @param {string} achievementKey
  */
-export async function persistAchievement(userId, achievementKey) {
-  try {
-    await supabase
-      .from('achievements')
-      .upsert(
-        { user_id: userId, achievement_key: achievementKey, unlocked_at: new Date().toISOString() },
-        { onConflict: 'user_id,achievement_key' }
-      )
-  } catch (err) {
-    // Silently ignore — achievements persistence is optional
-    console.warn('Achievement persistence skipped:', err.message)
-  }
+export async function persistAchievement(_userId, _achievementKey) {
+  // No persistence backend available — achievements are evaluated
+  // client-side from simulation history only.
+  return
 }
 
 /**

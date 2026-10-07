@@ -1,19 +1,19 @@
 import { useState, useEffect } from 'react'
-import { getSimulationById } from '../services/supabase.js'
+import { getSimulationById } from '../services/backend.js'
 
 /**
  * useSimulationRecord
  * ----------------------------------------------------------------
  * Data-fetching hook for retrieving a single simulation record from
  * Supabase by its `id` (the `simulations` table, via
- * services/supabase.js's getSimulationById).
+ * services/backend.js's getSimulationById).
  *
  * Intended for the /history/:id route: ResultsPage (in its
  * read-only mode) reads `id` via useParams() and passes it here to
  * load a historical record's `inputs`/`results`, instead of reading
  * SimulationContext.currentResult.
  *
- * NOTE: services/supabase.js does not yet export `getSimulationById`.
+ * NOTE: services/backend.js does not yet export `getSimulationById`.
  * It is expected to follow the same Promise<{ data, error }>
  * contract as the existing getSimulationHistory, scoped to a single
  * row via `.eq('id', id).single()`.

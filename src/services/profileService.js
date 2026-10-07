@@ -1,12 +1,13 @@
-import { supabase } from './supabase.js'
+import { getProfile as fetchProfile, updateProfile as saveProfile } from './backend.js'
 
 /**
  * profileService
  * ----------------------------------------------------------------
- * Dedicated CRUD service for the Supabase `profiles` table.
+ * Dedicated read/update service for the `profiles` row, backed by
+ * the Cloudflare Workers API (via backend.js).
  *
  * CRITICAL FIELD-NAME MAPPING:
- * The Supabase schema stores height_cm / weight_kg.
+ * The database schema stores height_cm / weight_kg.
  * The React frontend (SimulationForm.jsx, simulationEngine.js) uses
  * height / weight throughout.
  *
@@ -22,20 +23,17 @@ import { supabase } from './supabase.js'
  */
 
 /**
- * Fetches the profile row for `userId` from the `profiles` table
- * and maps database column names to the frontend field names used
- * throughout the React app and simulationEngine.js.
+ * Fetches the profile row for `userId` from the worker API and maps
+ * database column names to the frontend field names used throughout
+ * the React app and simulationEngine.js.
  *
- * @param {string} userId - The auth user's UUID (auth.users.id).
+ * @param {string} _userId - The auth user's UUID (unused by the API;
+ *   kept for signature compatibility with the old Supabase client).
  * @returns {Promise<{ data: object|null, error: Error|null }>}
  */
-export async function getProfile(userId) {
+export async function getProfile(_userId) {
     try {
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single()
+        const { data, error } = await fetchProfile()
 
         if (error) {
             return { data: null, error }
@@ -54,16 +52,12 @@ export async function getProfile(userId) {
 }
 
 /**
- * Upserts the profile row for `userId` in the `profiles` table,
- * mapping frontend field names back to database column names
- * before sending the payload to Supabase.
+ * Saves the profile row for `userId` through the worker API
+ * (PUT /profile is an upsert), mapping frontend field names back to
+ * database column names before sending the payload.
  *
- * Uses upsert (insert + on-conflict update) so this function works
- * whether the profile row already exists or not, including for
- * OAuth users whose profile may have been auto-created by the
- * handle_new_user trigger without height/weight yet.
- *
- * @param {string} userId - The auth user's UUID (auth.users.id).
+ * @param {string} userId - The auth user's UUID (unused by the API;
+ *   kept for signature compatibility with the old Supabase client).
  * @param {object} profileData - Frontend-shaped profile fields.
  *   Accepted keys: full_name, age, gender, height, weight
  *   (plus any other `profiles` columns the caller wants to set).
@@ -73,11 +67,7 @@ export async function updateProfile(userId, profileData) {
     try {
         const payload = mapToDatabase(userId, profileData)
 
-        const { data, error } = await supabase
-            .from('profiles')
-            .upsert(payload, { onConflict: 'id' })
-            .select()
-            .single()
+        const { data, error } = await saveProfile(payload)
 
         if (error) {
             return { data: null, error }
@@ -100,8 +90,8 @@ export async function updateProfile(userId, profileData) {
 // ----------------------------------------------------------------
 
 /**
- * Maps a raw Supabase `profiles` row (database shape) to the
- * frontend shape used by SimulationForm.jsx and simulationEngine.js:
+ * Maps a raw `profiles` row (database shape) to the frontend shape
+ * used by SimulationForm.jsx and simulationEngine.js:
  *   { height_cm, weight_kg, ... } -> { height, weight, ... }
  */
 function mapFromDatabase(row) {
@@ -118,11 +108,12 @@ function mapFromDatabase(row) {
 
 /**
  * Maps a frontend-shaped profileData object to the database column
- * names expected by the Supabase `profiles` schema:
+ * names expected by the `profiles` schema:
  *   { height, weight, ... } -> { id, height_cm, weight_kg, updated_at, ... }
  *
- * Also injects `id` (required for upsert) and a fresh `updated_at`
- * timestamp.
+ * Also injects `id` (for parity with the upsert contract) and a
+ * fresh `updated_at` timestamp (the worker ignores unknown keys and
+ * stamps its own updated_at server-side).
  */
 function mapToDatabase(userId, profileData) {
     const { height, weight, ...rest } = profileData

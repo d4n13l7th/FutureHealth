@@ -46,7 +46,7 @@ function buildSubtitle(latest) {
  * the full simulation history.
  *
  * Reads from a simulation history record (`latest`), the shape
- * persisted by services/supabase.js's saveSimulation:
+ * persisted by services/backend.js's saveSimulation:
  *   { created_at, results: { healthScore, category, ... }, ... }
  *
  * Defensive: `latest`, `latest.created_at`, and `latest.results`

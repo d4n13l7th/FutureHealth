@@ -147,3 +147,6 @@ vite.config.ts.timestamp-*
 
 .vercel
 .env*
+
+# Browser test snapshots
+.playwright-mcp/

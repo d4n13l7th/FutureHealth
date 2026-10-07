@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
-import { getSimulationHistory } from '../services/supabase.js'
+import { getSimulationHistory } from '../services/backend.js'
 
 /**
  * useSimulationHistory
  * ----------------------------------------------------------------
  * Data-fetching hook for retrieving the authenticated user's past
  * simulations from Supabase (the `simulations` table, via
- * services/supabase.js's getSimulationHistory).
+ * services/backend.js's getSimulationHistory).
  *
  * Used by DashboardPage (last simulation, active goal summaries)
  * and HistoryPage (full history list, compare-futures source data).
