@@ -122,7 +122,7 @@ export default function ResultsPage() {
 
   // --- Active mode: no simulation in memory -> redirect ---
   if (!isReadOnly && !currentResult) {
-    return <Navigate to="/simulation" replace />
+    return <Navigate to="/simulation" replace state={{ fromRedirect: true }} />
   }
 
   // --- Resolve data source based on mode ---

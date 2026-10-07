@@ -1,4 +1,4 @@
-import { Globe, HeartPulse } from 'lucide-react'
+import { HeartPulse } from 'lucide-react'
 
 /**
  * SDGImpactCard

@@ -37,6 +37,9 @@ export function useSimulationRecord(id) {
   const [isLoading, setIsLoading] = useState(Boolean(id))
   const [error, setError] = useState(null)
 
+  /* eslint-disable react-hooks/set-state-in-effect -- reset state ketika id
+     kosong harus dilakukan saat effect berjalan (bukan saat render) agar aman
+     terhadap perubahan rute /history/:id. */
   useEffect(() => {
     if (!id) {
       setRecord(null)
@@ -63,7 +66,7 @@ export function useSimulationRecord(id) {
         }
 
         setRecord(data ?? null)
-      } catch (err) {
+      } catch {
         if (!isMounted) return
         setError('Terjadi kesalahan tak terduga saat memuat data simulasi.')
         setRecord(null)
@@ -80,6 +83,7 @@ export function useSimulationRecord(id) {
       isMounted = false
     }
   }, [id])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return { record, isLoading, error }
 }

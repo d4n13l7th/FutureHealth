@@ -58,12 +58,15 @@ export const LANDING_CTA = {
 // ----------------------------------------------------------------
 
 export const CHATBOT_SUGGESTIONS = [
+  'Apa itu FutureHealth?',
+  'Apa itu SDG 3?',
   'Apa arti skor saya?',
   'Bagaimana cara meningkatkan tidur?',
   'Jelaskan risiko saya',
   'Tips olahraga',
   'Apa itu BMI?',
   'Target kesehatan saya',
+  'Bantuan',
 ]
 
 // ----------------------------------------------------------------

@@ -56,16 +56,20 @@ export function useSimulationHistory() {
       }
 
       setHistory(data ?? [])
-    } catch (err) {
+    } catch {
       setError('Terjadi kesalahan tak terduga saat memuat riwayat simulasi.')
     } finally {
       setIsLoading(false)
     }
   }, [user])
 
+  /* eslint-disable react-hooks/set-state-in-effect -- fetchHistory memang harus
+     mengatur history/isLoading/error di dalam effect saat user berubah; tidak
+     ada trigger lain selain perubahan `user`. */
   useEffect(() => {
     fetchHistory()
   }, [fetchHistory])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   return {
     history,

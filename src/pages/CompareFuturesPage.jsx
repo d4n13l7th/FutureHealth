@@ -1,14 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Navigate } from 'react-router-dom'
-import {
-SlidersHorizontal,
-GitCompare,
-FileText,
-TrendingUp,
-TrendingDown,
-Minus,
-ArrowRight,
-} from 'lucide-react'
+import { GitCompare } from 'lucide-react'
 
 // Hooks & Services
 import { useSimulationContext } from '../context/SimulationContext.jsx'
@@ -29,7 +21,9 @@ import ComparisonSummary from '../components/compare/ComparisonSummary.jsx'
  *
  * - Scenario A is always `currentInputs` from SimulationContext.
  * - Scenario B (`alternativeInputs`) starts as a copy of Scenario A
- * and is adjusted via ScenarioCard.
+ * and is adjusted via ScenarioCard. It re-syncs itself during render
+ * whenever a new baseline simulation arrives, so it can never go
+ * stale (or stay null after an async first load).
  * - simulationEngine.compareScenarios() recomputes both full
  * simulations and their difference whenever either input changes.
  *
@@ -40,6 +34,16 @@ import ComparisonSummary from '../components/compare/ComparisonSummary.jsx'
 export default function CompareFuturesPage() {
   const { currentInputs } = useSimulationContext()
   const [alternativeInputs, setAlternativeInputs] = useState(currentInputs)
+  const [prevCurrentInputs, setPrevCurrentInputs] = useState(currentInputs)
+
+  // Re-sync Scenario B during render whenever the active simulation
+  // (Scenario A) changes — after a new run or an async first load.
+  // User edits to Scenario B are preserved because this only runs
+  // when currentInputs itself changes.
+  if (currentInputs !== prevCurrentInputs) {
+    setPrevCurrentInputs(currentInputs)
+    setAlternativeInputs(currentInputs)
+  }
 
   const comparisonData = useMemo(() => {
     if (!currentInputs || !alternativeInputs) return null
@@ -49,6 +53,11 @@ export default function CompareFuturesPage() {
   // Guard: Redirect jika tidak ada simulasi aktif
   if (!currentInputs) {
     return <Navigate to="/simulation" replace />
+  }
+
+  // Transient frame: currentInputs loaded but state not yet re-synced.
+  if (!comparisonData) {
+    return null
   }
 
   const { resultA, resultB } = comparisonData

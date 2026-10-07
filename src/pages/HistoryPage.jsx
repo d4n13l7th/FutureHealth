@@ -1,11 +1,9 @@
-import { Loader2, AlertCircle, History as HistoryIcon, Calendar, Target, HeartPulse } from 'lucide-react'
+import { Loader2, AlertCircle, History as HistoryIcon } from 'lucide-react'
 import PageContainer from '../components/layout/PageContainer.jsx'
 import DisclaimerBanner from '../components/results/DisclaimerBanner.jsx'
 import { useSimulationHistory } from '../hooks/useSimulationHistory.js'
 import { DISCLAIMER } from '../services/simulationEngine.js'
 import HistoryItemCard from '../components/history/HistoryItemCard.jsx'
-
-const FALLBACK_VALUE = '-'
 
 /**
  * HistoryPage

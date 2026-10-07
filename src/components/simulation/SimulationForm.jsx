@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import { User, Activity, Heart, Target, ChevronRight, Loader2 } from 'lucide-react'
 import { SIMULATION_OPTIONS } from '../../services/simulationEngine.js'
+import Select from '../ui/Select.jsx'
+import Input from '../ui/Input.jsx'
+import Slider from '../ui/Slider.jsx'
 
 // ----------------------------------------------------------------
 // Static option lists
@@ -42,39 +45,34 @@ const DEFAULT_FORM_DATA = {
 }
 
 // ----------------------------------------------------------------
-// Local field primitives
+// Field wrappers over components/ui primitives
 // ----------------------------------------------------------------
-// TODO: replace with components/ui/Select.jsx, Input.jsx, and
-// Slider.jsx respectively once those UI primitives are generated.
+// Thin adapters that keep this form's `label + field + onChange`
+// calling convention while delegating rendering to the shared
+// ui/Select, ui/Input, and ui/Slider primitives.
 // ----------------------------------------------------------------
 
-/** TODO: replace with components/ui/Select.jsx */
 function SelectField({ label, value, onChange, options }) {
   return (
     <div>
       <label className="label-text">{label}</label>
-      <select
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="input-field"
-      >
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
+      <div className="mt-1.5">
+        <Select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          options={options.map((option) => ({ value: option, label: option }))}
+        />
+      </div>
     </div>
   )
 }
 
-/** TODO: replace with components/ui/Input.jsx */
 function NumberField({ label, value, onChange, min, max, suffix }) {
   return (
     <div>
       <label className="label-text">{label}</label>
-      <div className="relative">
-        <input
+      <div className="mt-1.5">
+        <Input
           type="number"
           value={value}
           min={min}
@@ -82,19 +80,17 @@ function NumberField({ label, value, onChange, min, max, suffix }) {
           onChange={(event) =>
             onChange(event.target.value === '' ? '' : Number(event.target.value))
           }
-          className={`input-field ${suffix ? 'pr-12' : ''}`}
+          rightIcon={
+            suffix ? (
+              <span className="text-sm font-medium text-slate-400">{suffix}</span>
+            ) : null
+          }
         />
-        {suffix && (
-          <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-sm text-slate-400">
-            {suffix}
-          </span>
-        )}
       </div>
     </div>
   )
 }
 
-/** TODO: replace with components/ui/Slider.jsx */
 function RangeField({ label, value, onChange, min = 1, max = 10 }) {
   return (
     <div>
@@ -104,13 +100,11 @@ function RangeField({ label, value, onChange, min = 1, max = 10 }) {
           {value}/{max}
         </span>
       </div>
-      <input
-        type="range"
+      <Slider
         min={min}
         max={max}
         value={value}
         onChange={(event) => onChange(Number(event.target.value))}
-        className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-100 accent-emerald-500"
       />
     </div>
   )

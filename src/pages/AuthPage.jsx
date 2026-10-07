@@ -61,7 +61,7 @@ export default function AuthPage() {
           setError(mapAuthError(authError))
         }
       }
-    } catch (err) {
+    } catch {
       setError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
     } finally {
       setIsSubmitting(false)
@@ -79,7 +79,7 @@ export default function AuthPage() {
         setError(mapAuthError(authError))
         setIsGoogleLoading(false)
       }
-    } catch (err) {
+    } catch {
       setError('Tidak dapat memulai proses masuk dengan Google.')
       setIsGoogleLoading(false)
     }

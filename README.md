@@ -1,6 +1,6 @@
 # 🌟 FutureHealth
 
-FutureHealth is an interactive health journey simulation platform designed to help users explore how lifestyle choices and commitment levels influence their long-term well-being. By predicting the time required to achieve specific health goals based on daily habits, FutureHealth empowers users to make informed, healthier choices. 
+FutureHealth is an interactive health journey simulation platform designed to help users explore how lifestyle choices and commitment levels influence their long-term well-being. By predicting the time required to achieve specific health goals based on daily habits, FutureHealth empowers users to make informed, healthier choices.
 
 This project is built to promote healthy habits and directly supports **Sustainable Development Goal (SDG) 3: Good Health and Well-being**.
 
@@ -18,12 +18,15 @@ This project is built to promote healthy habits and directly supports **Sustaina
 
 ## 🛠️ Tech Stack
 
-* **Frontend Framework:** React 18
-* **Build Tool:** Vite
+* **Frontend Framework:** React 19
+* **Build Tool:** Vite 5
 * **Styling:** Tailwind CSS
 * **Icons:** Lucide React
+* **Charts:** Recharts
+* **Animation:** Framer Motion
 * **Backend & Authentication:** Supabase
 * **Routing:** React Router DOM
+* **Linting:** ESLint 10 (flat config)
 
 ---
 
@@ -32,48 +35,82 @@ This project is built to promote healthy habits and directly supports **Sustaina
 Follow these steps to run FutureHealth locally on your machine.
 
 ### Prerequisites
+
 * [Node.js](https://nodejs.org/) (v18 LTS or higher recommended)
 * npm (comes with Node.js)
 
 ### Installation
 
 1. **Clone the repository:**
+
    ```bash
-   git clone [https://github.com/your-username/FutureHealth.git](https://github.com/your-username/FutureHealth.git)
+   git clone https://github.com/d4n13l7th/FutureHealth.git
    cd FutureHealth
-Install dependencies:
-(Note: If you encounter peer dependency conflicts with React/Vite, use the legacy flag as shown below)
+   ```
 
-Bash
-npm install --legacy-peer-deps
-Set up Environment Variables:
-Create a .env file in the root directory and add your Supabase credentials:
+2. **Install dependencies:**
 
-Code snippet
-VITE_SUPABASE_URL=your_supabase_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-Run the development server:
+   ```bash
+   npm install --legacy-peer-deps
+   ```
 
-Bash
-npm run dev
-Open the app:
-Visit http://localhost:5173 in your browser to see the app in action!
+   > Note: The `--legacy-peer-deps` flag avoids peer dependency conflicts with React 19 / Vite.
 
-📂 Architecture Overview
+3. **Set up environment variables:**
+
+   Copy the example file and fill in your Supabase credentials:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   ```env
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+
+4. **Set up the database:**
+
+   Run the SQL in `supabase/schema.sql` against your Supabase project (SQL Editor or CLI). This creates the `profiles` and `simulations` tables, row-level security policies, and the `handle_new_user` trigger.
+
+5. **Run the development server:**
+
+   ```bash
+   npm run dev
+   ```
+
+6. **Open the app:**
+
+   Visit [http://localhost:5173](http://localhost:5173) in your browser to see the app in action!
+
+### Other Scripts
+
+```bash
+npm run lint     # run ESLint over the project
+npm run build    # production build to dist/
+npm run preview  # preview the production build
+```
+
+---
+
+## 📂 Architecture Overview
+
 FutureHealth follows a modular component architecture:
 
-/src/components - Reusable UI elements (divided into domains like /chatbot, /compare, /results).
+* `/src/components` — Reusable UI elements (divided into domains like `/chatbot`, `/compare`, `/results`, plus shared primitives in `/ui`).
+* `/src/hooks` — Custom React hooks for state and data fetching (`useSimulation`, `useChatbot`, `useSimulationHistory`).
+* `/src/pages` — Main pages routed by the application.
+* `/src/services` — Core business logic engines (`simulationEngine.js`, `chatbotEngine.js`) and the Supabase connection.
+* `/src/context` — Global state management (`AuthContext`, `SimulationContext`, `ToastContext`).
+* `/src/router` / `/src/layouts` — Route definitions (with lazy-loaded page chunks) and the protected app shell.
+* `/supabase` — Database schema (`schema.sql`).
 
-/src/hooks - Custom React hooks for state and data fetching (useSimulation, useChatbot).
+---
 
-/src/pages - Main layout pages routing the application.
+## 🎯 Contributing
 
-/src/services - Core business logic engines (simulationEngine.js, chatbotEngine.js) and Supabase connection.
+Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/d4n13l7th/FutureHealth/issues) if you want to contribute.
 
-/src/context - Global state management (AuthContext, SimulationContext).
+## 📄 License
 
-🎯 Contributing
-Contributions, issues, and feature requests are welcome! Feel free to check the issues page if you want to contribute.
-
-📄 License
 This project is licensed under the MIT License.

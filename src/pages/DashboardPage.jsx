@@ -1,16 +1,4 @@
-import { Link } from 'react-router-dom'
-import {
-  Loader2,
-  AlertCircle,
-  Sparkles,
-  ArrowRight,
-  Calendar,
-  Target,
-  HeartPulse,
-  Scale,
-  Cake,
-  History,
-} from 'lucide-react'
+import { Loader2, AlertCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSimulationHistory } from '../hooks/useSimulationHistory.js'
 import PageContainer from '../components/layout/PageContainer.jsx'

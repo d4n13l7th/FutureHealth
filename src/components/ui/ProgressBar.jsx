@@ -17,10 +17,8 @@ function cx(...classes) {
  * FutureHealth. Renders a track with a filled portion proportional
  * to `progress` (0-100).
  *
- * Crucial for the upcoming multi-step SimulationForm wizard
- * (components/simulation/StepProgressBar.jsx will wrap this to show
- * "Step X of Y" progress), and reusable anywhere else a simple
- * percentage indicator is needed (e.g. achievement progress).
+ * Useful anywhere a simple percentage indicator is needed (e.g.
+ * achievement progress, data-completion status).
  *
  * Props:
  * - progress: number (0-100). Clamped to this range before being

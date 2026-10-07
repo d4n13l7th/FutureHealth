@@ -64,7 +64,7 @@ export default function ProfilePage() {
       }
 
       navigate('/')
-    } catch (err) {
+    } catch {
       setLogoutError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
       setIsLoggingOut(false)
     }
