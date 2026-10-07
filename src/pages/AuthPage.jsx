@@ -77,12 +77,10 @@ export default function AuthPage() {
 
     try {
       const { error: authError } = await signInWithGoogle()
-      if (authError) {
-        setError(mapAuthError(authError))
-        setIsGoogleLoading(false)
-      }
+      if (authError) setError(mapAuthError(authError))
     } catch {
       setError('Tidak dapat memulai proses masuk dengan Google.')
+    } finally {
       setIsGoogleLoading(false)
     }
   }

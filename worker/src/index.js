@@ -77,6 +77,15 @@ function decodeB64(value) {
   return bytes;
 }
 
+// Base64URL (RFC 4648 §5) — used by Google's tokens and JWKS.
+function base64urlDecode(str) {
+  const b64 = String(str).replace(/-/g, '+').replace(/_/g, '/');
+  const bin = atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
 class ApiError extends Error {
   constructor(message, status = 400) {
     super(message);
@@ -84,8 +93,26 @@ class ApiError extends Error {
   }
 }
 
-function clientUser(id, email, fullName) {
-  return { id, email, user_metadata: { full_name: fullName } };
+function clientUser(id, email, fullName, avatarUrl) {
+  const user = { id, email, user_metadata: { full_name: fullName } };
+  if (avatarUrl) user.avatar_url = avatarUrl;
+  return user;
+}
+
+// -------------------------------------------------------------------
+// HTML helpers (used by the Google OAuth popup pages)
+// -------------------------------------------------------------------
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (c) => {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+
+function html(content, status = 200) {
+  return new Response(content, {
+    status,
+    headers: { 'Content-Type': 'text/html; charset=utf-8', ...BASE_HEADERS },
+  });
 }
 
 // -------------------------------------------------------------------
@@ -199,6 +226,308 @@ function parseSimulation(row) {
     results = {};
   }
   return { ...row, inputs, results };
+}
+
+// -------------------------------------------------------------------
+// Google OAuth (Authorization Code + state; no PKCE — this is a
+// confidential client because GOOGLE_CLIENT_SECRET lives in Worker
+// secrets). Flow:
+//
+//   1. GET /auth/google?redirect_to=<spa-url>  -> issues `state`,
+//      stores it in D1 (oauth_states), 302-redirects to Google.
+//   2. Google redirects back to /auth/google/callback?code=..&state=..
+//      The worker verifies state, exchanges the code for tokens at
+//      oauth2.googleapis.com, verifies the id_token signature via
+//      Google's JWKS (RS256, Web Crypto), finds or links the user,
+//      creates a session, and serves an HTML page that postMessage's
+//      the token back to the SPA popup.
+//
+// The `state` also carries the SPA URL to return to (redirect_to),
+// so the callback always knows where to postMessage.
+// -------------------------------------------------------------------
+
+const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
+const GOOGLE_JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs';
+const GOOGLE_AUTH_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
+const GOOGLE_ISS = ['https://accounts.google.com', 'accounts.google.com'];
+const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
+const DEFAULT_APP_ORIGIN = 'https://future-health-sdg3.vercel.app';
+
+function safeOrigin(raw) {
+  try {
+    return new URL(raw).origin;
+  } catch {
+    return null;
+  }
+}
+
+// Only allow redirect targets that are the configured SPA origin or
+// any http(s) localhost (local dev). Anything else is dropped so the
+// OAuth `state` can never be abused as an open redirect.
+function sanitizeRedirectTo(raw, appOrigin) {
+  if (!raw) return appOrigin || DEFAULT_APP_ORIGIN;
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'https:' && u.protocol !== 'http:') return null;
+    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return u.toString();
+    const base = appOrigin || DEFAULT_APP_ORIGIN;
+    if (u.origin === safeOrigin(base)) return u.toString();
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+async function createOAuthState(env, redirectTo) {
+  // Prune stale states on write (cheap, keeps the table small).
+  await env[DB_NAME]
+    .prepare('DELETE FROM oauth_states WHERE created_at < ?')
+    .bind(new Date(Date.now() - OAUTH_STATE_TTL_MS).toISOString())
+    .run();
+
+  const state = randomHex(32);
+  const now = new Date().toISOString();
+  await env[DB_NAME]
+    .prepare('INSERT INTO oauth_states (state, redirect_to, created_at) VALUES (?, ?, ?)')
+    .bind(state, redirectTo, now)
+    .run();
+  return state;
+}
+
+async function consumeOAuthState(env, state) {
+  if (!state) return null;
+  const row = await env[DB_NAME]
+    .prepare('SELECT redirect_to FROM oauth_states WHERE state = ?')
+    .bind(state)
+    .first();
+  if (row) {
+    await env[DB_NAME].prepare('DELETE FROM oauth_states WHERE state = ?').bind(state).run();
+  }
+  return row ? row.redirect_to : null;
+}
+
+// Google's signing keys (cached module-level; refreshed on expiry).
+let googleJwksCache = null;
+let googleJwksFetchedAt = 0;
+const GOOGLE_JWKS_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+async function getGoogleJwks() {
+  if (googleJwksCache && Date.now() - googleJwksFetchedAt < GOOGLE_JWKS_MAX_AGE_MS) {
+    return googleJwksCache;
+  }
+  const res = await fetch(GOOGLE_JWKS_URL);
+  if (!res.ok) throw new ApiError('Gagal mengambil kunci verifikasi Google.', 502);
+  const data = await res.json();
+  const keys = {};
+  for (const key of Array.isArray(data.keys) ? data.keys : []) {
+    if (key && key.kid && key.kty === 'RSA' && key.n && key.e) keys[key.kid] = key;
+  }
+  if (Object.keys(keys).length === 0) throw new ApiError('Kunci verifikasi Google kosong.', 502);
+  googleJwksCache = keys;
+  googleJwksFetchedAt = Date.now();
+  return keys;
+}
+
+// Verifies the Google id_token (JWT, RS256) and returns its claims.
+async function verifyGoogleIdToken(idToken, expectedAudience) {
+  const parts = String(idToken || '').split('.');
+  if (parts.length !== 3) throw new ApiError('Token Google tidak valid.', 401);
+  const [headerB64, payloadB64, sigB64] = parts;
+
+  let header;
+  try {
+    header = JSON.parse(new TextDecoder().decode(base64urlDecode(headerB64)));
+  } catch {
+    throw new ApiError('Token Google tidak valid.', 401);
+  }
+  if (header.alg !== 'RS256') throw new ApiError('Algoritme token Google tidak didukung.', 401);
+
+  const keys = await getGoogleJwks();
+  const key = keys[header.kid];
+  if (!key) throw new ApiError('Kunci token Google tidak ditemukan.', 401);
+
+  const data = encoder.encode(`${headerB64}.${payloadB64}`);
+  let valid = false;
+  try {
+    const cryptoKey = await crypto.subtle.importKey(
+      'jwk',
+      { kty: 'RSA', n: key.n, e: key.e, alg: 'RS256', use: 'sig' },
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['verify']
+    );
+    valid = await crypto.subtle.verify('RSASSA-PKCS1-v1_5', cryptoKey, base64urlDecode(sigB64), data);
+  } catch {
+    valid = false;
+  }
+  if (!valid) throw new ApiError('Verifikasi token Google gagal.', 401);
+
+  let payload;
+  try {
+    payload = JSON.parse(new TextDecoder().decode(base64urlDecode(payloadB64)));
+  } catch {
+    throw new ApiError('Token Google tidak valid.', 401);
+  }
+
+  const now = Math.floor(Date.now() / 1000);
+  if (!GOOGLE_ISS.includes(String(payload.iss || ''))) throw new ApiError('Issuer token Google tidak valid.', 401);
+  if (payload.aud !== expectedAudience) throw new ApiError('Audience token Google tidak valid.', 401);
+  if (typeof payload.exp !== 'number' || payload.exp <= now) throw new ApiError('Token Google telah kedaluwarsa.', 401);
+
+  return payload;
+}
+
+// HTML page shown inside the popup: relays the auth result to the
+// SPA through postMessage, then closes the window.
+function oauthCallbackPage(redirectTo, result, errorMessage) {
+  const target = safeOrigin(redirectTo) || '*';
+  const payload = result
+    ? { source: 'futurehealth-google-auth', token: result.token, expiresAt: result.expiresAt, user: result.user }
+    : { source: 'futurehealth-google-auth', error: errorMessage };
+
+  const message = errorMessage || 'Berhasil masuk. Jendela ini akan ditutup otomatis.';
+  const script =
+    '(function(){' +
+    'var p = ' + JSON.stringify(payload) + ';' +
+    'if (window.opener) {' +
+    '  try { window.opener.postMessage(p, ' + JSON.stringify(target) + '); } catch (e) {}' +
+    '  setTimeout(function () { window.close(); }, 400);' +
+    '}' +
+    '})();';
+
+  return html(
+    '<!doctype html><html lang="id"><meta charset="utf-8">' +
+      '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+      '<title>' + escapeHtml(errorMessage ? 'Gagal masuk' : 'Berhasil masuk') + '</title>' +
+      '<body style="font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;min-height:100vh;' +
+      'display:flex;align-items:center;justify-content:center;background:#f8fafc;color:#0f172a">' +
+      '<div style="text-align:center;padding:32px;max-width:360px">' +
+      '<p style="font-size:18px;font-weight:600;margin:0 0 8px">' + escapeHtml(message) + '</p>' +
+      '<p style="color:#64748b;font-size:14px;margin:0 0 16px">Jika jendela ini tidak menutup otomatis, tutup secara manual.</p>' +
+      '<a href="' + escapeHtml(redirectTo || '/') + '" style="color:#059669;font-size:14px">Kembali ke FutureHealth</a>' +
+      '</div><script>' + script + '</script></body></html>'
+  );
+}
+
+async function startGoogleAuth({ request, env, url }) {
+  const clientId = env.GOOGLE_CLIENT_ID;
+  const clientSecret = env.GOOGLE_CLIENT_SECRET;
+  const redirectTo = sanitizeRedirectTo(url.searchParams.get('redirect_to'), env.APP_ORIGIN) || DEFAULT_APP_ORIGIN;
+
+  if (!clientId || !clientSecret) {
+    return oauthCallbackPage(
+      redirectTo,
+      null,
+      'Login dengan Google belum dikonfigurasi. Coba lagi nanti.'
+    );
+  }
+
+  const state = await createOAuthState(env, redirectTo);
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: new URL('/auth/google/callback', request.url).toString(),
+    response_type: 'code',
+    scope: 'openid email profile',
+    state,
+    prompt: 'select_account',
+    access_type: 'online',
+  });
+
+  return Response.redirect(`${GOOGLE_AUTH_URL}?${params.toString()}`, 302);
+}
+
+async function googleAuthCallback({ env, url }) {
+  const state = url.searchParams.get('state');
+  const code = url.searchParams.get('code');
+  const errorParam = url.searchParams.get('error');
+
+  const clientId = env.GOOGLE_CLIENT_ID;
+  const clientSecret = env.GOOGLE_CLIENT_SECRET;
+
+  // The `state` must exist and match a live oauth_states row. Without
+  // it this callback is not part of a flow we started, so reject it.
+  const consumedRedirectTo = await consumeOAuthState(env, state);
+  const redirectTo = consumedRedirectTo || env.APP_ORIGIN || DEFAULT_APP_ORIGIN;
+  if (!consumedRedirectTo) {
+    return oauthCallbackPage(
+      redirectTo,
+      null,
+      'Sesi login tidak valid atau sudah kedaluwarsa. Silakan coba lagi.'
+    );
+  }
+
+  if (errorParam) {
+    return oauthCallbackPage(redirectTo, null, 'Anda membatalkan login dengan Google.');
+  }
+  if (!clientId || !clientSecret) {
+    return oauthCallbackPage(redirectTo, null, 'Login dengan Google belum dikonfigurasi. Coba lagi nanti.');
+  }
+  if (!code) {
+    return oauthCallbackPage(redirectTo, null, 'Kode otorisasi Google tidak valid.');
+  }
+
+  const tokenRes = await fetch(GOOGLE_TOKEN_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: new URL('/auth/google/callback', url).toString(),
+      grant_type: 'authorization_code',
+    }),
+  });
+  const tokenData = await tokenRes.json();
+  if (!tokenRes.ok || !tokenData || !tokenData.id_token) {
+    return oauthCallbackPage(redirectTo, null, 'Gagal menukar kode otorisasi Google. Coba lagi.');
+  }
+
+  let claims;
+  try {
+    claims = await verifyGoogleIdToken(tokenData.id_token, clientId);
+  } catch (err) {
+    return oauthCallbackPage(redirectTo, null, err instanceof ApiError ? err.message : 'Token Google tidak valid.');
+  }
+
+  if (claims.email_verified !== true) {
+    return oauthCallbackPage(redirectTo, null, 'Harap verifikasi alamat email Google Anda terlebih dahulu.');
+  }
+
+  const email = String(claims.email || '').trim().toLowerCase();
+  if (!email || !EMAIL_RE.test(email)) {
+    return oauthCallbackPage(redirectTo, null, 'Akun Google tidak memiliki alamat email yang valid.');
+  }
+
+  const fullName = String(claims.name || claims.given_name || '').trim() || null;
+  const avatarUrl = String(claims.picture || '').trim() || null;
+  const now = new Date().toISOString();
+
+  const existing = await env[DB_NAME].prepare('SELECT * FROM users WHERE email = ?').bind(email).first();
+  let userId;
+  if (existing) {
+    userId = existing.id;
+    await env[DB_NAME]
+      .prepare(
+        'UPDATE users SET google_sub = COALESCE(google_sub, ?), full_name = COALESCE(?, full_name), avatar_url = COALESCE(?, avatar_url) WHERE id = ?'
+      )
+      .bind(claims.sub, fullName, avatarUrl, userId)
+      .run();
+  } else {
+    userId = crypto.randomUUID();
+    await env[DB_NAME].batch([
+      env[DB_NAME]
+        .prepare(
+          'INSERT INTO users (id, email, password_hash, google_sub, avatar_url, full_name, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        )
+        .bind(userId, email, '', claims.sub, avatarUrl, fullName, now),
+      env[DB_NAME]
+        .prepare('INSERT INTO profiles (id, full_name, created_at, updated_at) VALUES (?, ?, ?, ?)')
+        .bind(userId, fullName, now, now),
+    ]);
+  }
+
+  const { token, expiresAt } = await createSession(env, userId);
+  return oauthCallbackPage(redirectTo, { token, expiresAt, user: clientUser(userId, email, fullName, avatarUrl) }, null);
 }
 
 // -------------------------------------------------------------------
@@ -427,6 +756,8 @@ async function route(ctx) {
   if (path === '/auth/login' && method === 'POST') return login(ctx);
   if (path === '/auth/me' && method === 'GET') return me(ctx);
   if (path === '/auth/logout' && method === 'POST') return logout(ctx);
+  if (path === '/auth/google' && method === 'GET') return startGoogleAuth(ctx);
+  if (path === '/auth/google/callback' && method === 'GET') return googleAuthCallback(ctx);
   if (path === '/profile' && method === 'GET') return getProfile(ctx);
   if (path === '/profile' && method === 'PUT') return putProfile(ctx);
   if (path === '/achievements' && method === 'GET') return listAchievements(ctx);

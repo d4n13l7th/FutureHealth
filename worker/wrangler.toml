@@ -10,5 +10,13 @@ database_name = "futurehealth-db"
 database_id = "29aa61d1-8b3c-4923-8978-b35f214ba7e0"
 migrations_dir = "migrations"
 
+# Production SPA origin: the only redirect_target / postMessage origin
+# allowed by the Google OAuth flow besides localhost.
+[vars]
+APP_ORIGIN = "https://future-health-sdg3.vercel.app"
+
+# Secrets (set with `wrangler secret put ...`):
+#   GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET
+
 # [observability]
 # enabled = true

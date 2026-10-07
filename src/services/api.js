@@ -16,6 +16,16 @@
 
 const BASE_URL = (import.meta.env.VITE_API_URL || '').replace(/\/+$/, '')
 
+// Origin of the API (parsed from BASE_URL). Used to validate
+// postMessage events coming from the Google OAuth popup.
+export const API_ORIGIN = (() => {
+  try {
+    return new URL(BASE_URL).origin
+  } catch {
+    return ''
+  }
+})()
+
 export const TOKEN_KEY = 'futurehealth_token'
 
 export function getToken() {

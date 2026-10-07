@@ -54,7 +54,9 @@ export function AuthProvider({ children }) {
   }
 
   async function signInWithGoogle() {
-    return signInWithGoogleService()
+    const result = await signInWithGoogleService()
+    if (!result.error) setUser(result.data.user)
+    return result
   }
 
   async function signOut() {

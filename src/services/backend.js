@@ -15,10 +15,15 @@
  * ----------------------------------------------------------------
  */
 
-import { apiFetch, setToken, clearToken, getToken } from './api.js'
+import { apiFetch, setToken, clearToken, getToken, API_ORIGIN } from './api.js'
 
 const GOOGLE_NOT_AVAILABLE =
   'Masuk dengan Google belum tersedia di versi ini. Silakan pakai email & kata sandi.'
+
+const GOOGLE_POPUP_WIDTH = 520
+const GOOGLE_POPUP_HEIGHT = 640
+const GOOGLE_POPUP_TIMEOUT_MS = 5 * 60 * 1000
+const GOOGLE_AUTH_SOURCE = 'futurehealth-google-auth'
 
 // Auth -------------------------------------------------------------------
 
@@ -50,8 +55,115 @@ export async function signInWithEmail(email, password) {
   }
 }
 
+/**
+ * Google OAuth via popup.
+ *
+ * Opens a popup pointing at `GET /auth/google?...` on the API origin.
+ * The worker runs the Authorization-Code flow and, on success, serves
+ * an HTML page that `postMessage`s the token back to this window
+ * ({ source: 'futurehealth-google-auth', token, user, ... }) before
+ * closing itself. Only messages from the API origin are accepted.
+ *
+ * Resolves `{ data: { user }, error }` (token stored on success).
+ */
 export function signInWithGoogle() {
-  return Promise.resolve({ data: null, error: new Error(GOOGLE_NOT_AVAILABLE) })
+  return new Promise((resolve) => {
+    if (!API_ORIGIN) {
+      resolve({ data: null, error: new Error(GOOGLE_NOT_AVAILABLE) })
+      return
+    }
+
+    let authUrl
+    try {
+      const u = new URL('/auth/google', API_ORIGIN)
+      if (typeof window !== 'undefined' && window.location?.href) {
+        u.searchParams.set('redirect_to', window.location.href)
+      }
+      authUrl = u.toString()
+    } catch {
+      resolve({ data: null, error: new Error(GOOGLE_NOT_AVAILABLE) })
+      return
+    }
+
+    const screenX = window.screenX ?? window.screenLeft ?? 0
+    const screenY = window.screenY ?? window.screenTop ?? 0
+    const outerWidth = window.outerWidth ?? window.innerWidth ?? 0
+    const outerHeight = window.outerHeight ?? window.innerHeight ?? 0
+    const left = screenX + (outerWidth - GOOGLE_POPUP_WIDTH) / 2
+    const top = screenY + (outerHeight - GOOGLE_POPUP_HEIGHT) / 2
+
+    let popup
+    try {
+      popup = window.open(
+        authUrl,
+        'futurehealth-google-auth',
+        `popup=1,width=${GOOGLE_POPUP_WIDTH},height=${GOOGLE_POPUP_HEIGHT},left=${Math.max(left, 0)},top=${Math.max(top, 0)}`
+      )
+    } catch {
+      popup = null
+    }
+    if (!popup) {
+      resolve({
+        data: null,
+        error: new Error(
+          'Pop-up diblokir oleh browser. Izinkan pop-up untuk situs ini lalu coba lagi.'
+        ),
+      })
+      return
+    }
+
+    let settled = false
+    let timeoutId
+    let pollId
+
+    const cleanup = () => {
+      window.removeEventListener('message', onAuthMessage)
+      if (timeoutId) clearTimeout(timeoutId)
+      if (pollId) clearInterval(pollId)
+    }
+
+    const finish = (data, error) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      try {
+        if (!error) popup.close()
+      } catch {
+        // Ignore — the popup may already be gone.
+      }
+      resolve({ data, error })
+    }
+
+    timeoutId = setTimeout(() => {
+      finish(
+        null,
+        new Error('Login dengan Google terlalu lama. Tutup pop-up dan coba lagi.')
+      )
+    }, GOOGLE_POPUP_TIMEOUT_MS)
+
+    // If the user closes the popup, surface it as a cancellations.
+    pollId = setInterval(() => {
+      if (popup.closed) {
+        finish(null, new Error('Anda menutup jendela login Google sebelum selesai.'))
+      }
+    }, 400)
+
+    function onAuthMessage(event) {
+      if (event.origin !== API_ORIGIN) return
+      const msg = event.data
+      if (!msg || typeof msg !== 'object' || msg.source !== GOOGLE_AUTH_SOURCE) return
+      if (msg.error) {
+        finish(null, new Error(msg.error))
+      } else if (msg.token) {
+        setToken(msg.token)
+        finish({ user: msg.user }, null)
+      } else {
+        finish(null, new Error('Respons login Google tidak dikenali. Coba lagi.'))
+      }
+    }
+
+    window.addEventListener('message', onAuthMessage)
+  })
 }
 
 /**
