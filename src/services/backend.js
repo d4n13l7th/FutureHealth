@@ -137,3 +137,32 @@ export async function getSimulationById(id) {
     return { data: null, error: err }
   }
 }
+
+// Achievements ------------------------------------------------------------
+
+export async function getAchievements() {
+  try {
+    const data = await apiFetch('/achievements')
+    return { data: data ?? [], error: null }
+  } catch (err) {
+    return { data: null, error: err }
+  }
+}
+
+/**
+ * Persists a set of unlocked achievement keys for the signed-in user
+ * (PUT /achievements). The userId comes from the bearer token, so it
+ * is not passed as an argument. Returns { data, error } with `data`
+ * being the full stored key list after the upsert.
+ */
+export async function syncAchievements(keys) {
+  try {
+    const data = await apiFetch('/achievements', {
+      method: 'PUT',
+      body: { keys: Array.isArray(keys) ? keys : [] },
+    })
+    return { data: data ?? [], error: null }
+  } catch (err) {
+    return { data: null, error: err }
+  }
+}

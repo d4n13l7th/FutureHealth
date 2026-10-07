@@ -5,8 +5,10 @@
  * against simulation history data. Uses a declarative rule list
  * so new achievements are just new entries — no UI changes needed.
  *
- * No persistence backend in the current version — achievements are
- * evaluated entirely client-side.
+ * Persistence is delegated to backend.syncAchievements
+ * (Cloudflare Worker + D1 `achievements` table). Unlocked keys are
+ * written best-effort; when the network/user is unavailable the
+ * evaluation still works from history alone.
  *
  * Used by: AchievementsStrip, DashboardPage
  * ----------------------------------------------------------------
@@ -96,19 +98,61 @@ export function getAchievementProgress(history = []) {
   }
 }
 
+import { getAchievements, syncAchievements } from './backend.js'
+
+// ----------------------------------------------------------------
+// Persistence (best-effort, D1-backed)
+// ----------------------------------------------------------------
+
 /**
- * Intentionally a no-op in the current Cloudflare backend: there is
- * no `achievements` table, so unlocked achievements are only shown
- * in-memory from the simulation history. Kept as an async function
- * so callers (e.g. DashboardPage) work unchanged.
+ * Evaluates unlocked achievements from the given history and tries to
+ * persist the winning keys to the backend (PUT /achievements). Never
+ * throws: failures are swallowed so achievement syncing can never
+ * break the simulation save flow.
  *
- * @param {string} userId
- * @param {string} achievementKey
+ * @param {Array} history - Simulation records from the backend API.
+ * @returns {Promise<{ data: Array<string>, error: Error|null }>}
+ */
+export async function persistAchievementsBestEffort(history = []) {
+  try {
+    const unlocked = evaluateAchievements(history)
+      .filter((a) => a.unlocked)
+      .map((a) => a.key)
+    if (unlocked.length === 0) return { data: [], error: null }
+    const { data, error } = await syncAchievements(unlocked)
+    return { data: data ?? [], error }
+  } catch (err) {
+    return { data: null, error: err }
+  }
+}
+
+/**
+ * Loads the achievement keys the server has stored, merged with the
+ * client-side evaluation so previously-unlocked achievements survive
+ * even when history is incomplete. Returns { data: Array<string>, error }.
+ *
+ * @param {Array} history
+ * @returns {Promise<{ data: Array<string>, error: Error|null }>}
+ */
+export async function getPersistedAchievementKeys(history = []) {
+  const clientKeys = evaluateAchievements(history)
+    .filter((a) => a.unlocked)
+    .map((a) => a.key)
+  const { data, error } = await getAchievements()
+  const serverKeys = Array.isArray(data) ? data : []
+  const merged = Array.from(new Set([...clientKeys, ...serverKeys]))
+  return { data: merged, error }
+}
+
+/**
+ * Kept for callers that previously used the no-op. Delegates to the
+ * history-based best-effort sync (ignores the single-key signature).
+ *
+ * @param {string} _userId
+ * @param {string} _achievementKey
  */
 export async function persistAchievement(_userId, _achievementKey) {
-  // No persistence backend available — achievements are evaluated
-  // client-side from simulation history only.
-  return
+  return persistAchievementsBestEffort([])
 }
 
 /**

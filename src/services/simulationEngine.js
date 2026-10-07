@@ -127,6 +127,32 @@ function getWeights(target) {
 }
 
 /**
+ * Maps a numeric screen-time value (in hours) to its 0-100 lifestyle
+ * sub-score. `screenTimeHours` is the primary form input; the legacy
+ * categorical `screenTime` string is kept for backward compatibility.
+ */
+export function getScreenTimeScore(hours) {
+  const value = Number(hours)
+  if (value < 2) return 95
+  if (value <= 5) return 75
+  if (value <= 8) return 50
+  return 25
+}
+
+/**
+ * Reverses a numeric screen-time value back into the legacy
+ * categorical label ("2-5 jam", ...) used by SCREEN_TIME_SCORES and
+ * the chatbot's screen-time advice.
+ */
+export function screenTimeLabel(hours) {
+  const value = Number(hours)
+  if (value < 2) return 'Kurang dari 2 jam'
+  if (value <= 5) return '2-5 jam'
+  if (value <= 8) return '5-8 jam'
+  return 'Lebih dari 8 jam'
+}
+
+/**
  * Returns the raw 0-100 sub-score for each lifestyle factor,
  * independent of weighting. Used by insights, risks, and
  * factor-identification logic.
@@ -136,10 +162,42 @@ function getFactorScores(inputs) {
     sleep: SLEEP_SCORES[inputs.sleepHours] ?? 50,
     water: WATER_SCORES[inputs.waterIntake] ?? 50,
     exercise: EXERCISE_SCORES[inputs.exerciseFrequency] ?? 50,
-    screenTime: SCREEN_TIME_SCORES[inputs.screenTime] ?? 50,
+    screenTime: Number.isFinite(Number(inputs.screenTimeHours))
+      ? getScreenTimeScore(inputs.screenTimeHours)
+      : SCREEN_TIME_SCORES[inputs.screenTime] ?? 50,
     stress: clamp(100 - (Number(inputs.stressLevel) || 5) * 10),
     diet: DIET_SCORES[inputs.dietQuality] ?? 50,
   }
+}
+
+/**
+ * Estimates the user's 1-10 stress level from lifestyle habits alone
+ * (the inverse of the average habit sub-score — healthier habits mean
+ * lower stress). The raw `stressLevel` input is intentionally ignored
+ * so the result is always derived, never self-referential.
+ */
+export function calculateStressScore(inputs = {}) {
+  const scores = getFactorScores(inputs)
+  const keys = ['sleep', 'water', 'exercise', 'screenTime', 'diet']
+  const values = keys.map((key) => scores[key])
+  const average = values.reduce((total, value) => total + value, 0) / values.length
+  return clamp(Math.round(10 - average / 10), 1, 10)
+}
+
+/**
+ * Derives a 1-10 commitment level from how consistent the user's
+ * habits are: starts at 5, +1 per factor scoring ≥70, -1 per factor
+ * scoring <45. Ignores the raw `commitmentLevel` input.
+ */
+export function calculateCommitmentScore(inputs = {}) {
+  const scores = getFactorScores(inputs)
+  const keys = ['sleep', 'water', 'exercise', 'screenTime', 'diet']
+  let score = 5
+  keys.forEach((key) => {
+    if (scores[key] >= 70) score += 1
+    else if (scores[key] < 45) score -= 1
+  })
+  return clamp(score, 1, 10)
 }
 
 const FACTOR_LABELS = {
@@ -705,10 +763,44 @@ export function compareScenarios(baseInputs, alternativeInputs) {
 // ----------------------------------------------------------------
 
 /**
+ * Normalizes raw simulation inputs before the pipeline runs:
+ * re-derives the legacy `screenTime` label from `screenTimeHours`
+ * when only the numeric form was provided, and computes
+ * `stressLevel` / `commitmentLevel` automatically whenever they are
+ * missing or invalid. Explicit numeric values always win, so What-If
+ * overrides are preserved.
+ */
+function resolveComputedInputs(rawInputs = {}) {
+  const inputs = { ...rawInputs }
+
+  if (
+    Number.isFinite(Number(inputs.screenTimeHours)) &&
+    (inputs.screenTime == null || inputs.screenTime === '')
+  ) {
+    inputs.screenTime = screenTimeLabel(inputs.screenTimeHours)
+  }
+
+  return {
+    ...inputs,
+    stressLevel: clamp(
+      Math.round(Number(inputs.stressLevel) || calculateStressScore(inputs)),
+      1,
+      10
+    ),
+    commitmentLevel: clamp(
+      Math.round(Number(inputs.commitmentLevel) || calculateCommitmentScore(inputs)),
+      1,
+      10
+    ),
+  }
+}
+
+/**
  * Runs the full simulation pipeline and returns a structured
  * results object consumed by the Results page.
  */
-export function runSimulation(inputs) {
+export function runSimulation(rawInputs) {
+  const inputs = resolveComputedInputs(rawInputs)
   const currentScore = calculateCurrentScore(inputs)
   const timeline = projectTimeline(currentScore, inputs.commitmentLevel, inputs.target)
   const futureScore = timeline[timeline.length - 1].score

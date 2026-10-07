@@ -1,8 +1,10 @@
 import { useState, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSimulationContext } from '../context/SimulationContext.jsx'
+import { useToast } from '../context/ToastContext.jsx'
 import { runSimulation } from '../services/simulationEngine.js'
-import { saveSimulation } from '../services/backend.js'
+import { saveSimulation, getSimulationHistory } from '../services/backend.js'
+import { persistAchievementsBestEffort } from '../services/achievementService.js'
 
 /**
  * useSimulation
@@ -26,6 +28,7 @@ import { saveSimulation } from '../services/backend.js'
 export function useSimulation() {
   const { user } = useAuth()
   const { setCurrentInputs, setCurrentResult } = useSimulationContext()
+  const { addToast } = useToast()
 
   const [isSimulating, setIsSimulating] = useState(false)
 
@@ -63,19 +66,36 @@ export function useSimulation() {
 
           if (saveError) {
             console.error('Gagal menyimpan simulasi:', saveError.message)
+            addToast('Gagal menyimpan simulasi. Hasil tetap dapat dilihat.', 'error')
             return { result, error: saveError }
+          }
+
+          addToast('Simulasi berhasil disimpan.', 'success')
+
+          // 4. Best-effort achievement sync. Evaluated after saving
+          // so the fresh record counts toward unlock conditions.
+          // Fire-and-forget: failures are swallowed since the
+          // achievement strip also merges server-synced keys.
+          try {
+            const { data: history } = await getSimulationHistory(user.id)
+            if (Array.isArray(history)) {
+              await persistAchievementsBestEffort(history)
+            }
+          } catch (err) {
+            console.error('Gagal menyinkronkan pencapaian:', err?.message ?? err)
           }
         }
 
         return { result, error: null }
       } catch (err) {
         console.error('Gagal menjalankan simulasi:', err)
+        addToast('Terjadi kendala saat menjalankan simulasi.', 'error')
         return { result: null, error: err }
       } finally {
         setIsSimulating(false)
       }
     },
-    [user, setCurrentInputs, setCurrentResult]
+    [user, setCurrentInputs, setCurrentResult, addToast]
   )
 
   return {

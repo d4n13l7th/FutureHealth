@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Navigate, Link } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { Mail, Lock, User, Loader2, Chrome, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 
 export default function AuthPage() {
   const { user, loading, signIn, signUp, signInWithGoogle } = useAuth()
+  const location = useLocation()
 
   const [isSignUp, setIsSignUp] = useState(false)
   const [fullName, setFullName] = useState('')
@@ -24,7 +25,8 @@ export default function AuthPage() {
   }
 
   if (user) {
-    return <Navigate to="/dashboard" replace />
+    const from = location.state?.from ?? '/dashboard'
+    return <Navigate to={from} replace />
   }
 
   function switchMode() {
@@ -229,19 +231,6 @@ export default function AuthPage() {
               {isSignUp ? 'Masuk' : 'Daftar'}
             </button>
           </p>
-
-          {/* Guest mode */}
-          <div className="mt-4 border-t border-slate-100 pt-4 text-center">
-            <p className="text-xs text-slate-400">
-              Hanya ingin mencoba?{' '}
-              <Link
-                to="/simulation"
-                className="font-medium text-slate-500 underline decoration-slate-400 underline-offset-2 hover:text-emerald-600 hover:decoration-emerald-500"
-              >
-                Lanjutkan sebagai tamu
-              </Link>
-            </p>
-          </div>
         </div>
       </div>
     </div>

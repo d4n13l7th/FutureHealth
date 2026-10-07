@@ -329,6 +329,43 @@ async function putProfile(ctx) {
   return json({ data: { id: session.userId, ...merged, created_at: createdAt, updated_at: now } });
 }
 
+async function listAchievements(ctx) {
+  const session = await requireUser(ctx);
+  const result = await ctx.env[DB_NAME]
+    .prepare('SELECT achievement_key AS key FROM achievements WHERE user_id = ? ORDER BY unlocked_at ASC')
+    .bind(session.userId)
+    .all();
+  return json({ data: result.results.map((row) => row.key) });
+}
+
+async function putAchievements(ctx) {
+  const session = await requireUser(ctx);
+  const body = await readJson(ctx.request);
+  const keys = Array.isArray(body?.keys) ? body.keys : [];
+  const uniqueKeys = [...new Set(keys.map((k) => String(k).trim()).filter(Boolean))];
+
+  if (uniqueKeys.length > 0) {
+    const now = new Date().toISOString();
+    await ctx.env[DB_NAME].batch(
+      uniqueKeys.map((achievementKey) =>
+        ctx.env[DB_NAME]
+          .prepare(
+            `INSERT INTO achievements (user_id, achievement_key, unlocked_at)
+             VALUES (?, ?, ?)
+             ON CONFLICT (user_id, achievement_key) DO NOTHING`
+          )
+          .bind(session.userId, achievementKey, now)
+      )
+    );
+  }
+
+  const result = await ctx.env[DB_NAME]
+    .prepare('SELECT achievement_key AS key FROM achievements WHERE user_id = ? ORDER BY unlocked_at ASC')
+    .bind(session.userId)
+    .all();
+  return json({ data: result.results.map((row) => row.key) });
+}
+
 async function createSimulation(ctx) {
   const session = await requireUser(ctx);
   const body = await readJson(ctx.request);
@@ -392,6 +429,8 @@ async function route(ctx) {
   if (path === '/auth/logout' && method === 'POST') return logout(ctx);
   if (path === '/profile' && method === 'GET') return getProfile(ctx);
   if (path === '/profile' && method === 'PUT') return putProfile(ctx);
+  if (path === '/achievements' && method === 'GET') return listAchievements(ctx);
+  if (path === '/achievements' && method === 'PUT') return putAchievements(ctx);
   if (path === '/simulations' && method === 'POST') return createSimulation(ctx);
   if (path === '/simulations' && method === 'GET') return listSimulations(ctx);
 

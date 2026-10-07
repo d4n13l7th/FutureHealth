@@ -6,6 +6,7 @@ import WelcomeCard from '../components/dashboard/WelcomeCard.jsx'
 import EmptyDashboardState from '../components/dashboard/EmptyDashboardState.jsx'
 import QuickStatsRow from '../components/dashboard/QuickStatsRow.jsx'
 import LastSimulationCard from '../components/dashboard/LastSimulationCard.jsx'
+import AchievementsStrip from '../components/dashboard/AchievementsStrip.jsx'
 
 /**
  * DashboardPage
@@ -57,11 +58,13 @@ export default function DashboardPage() {
           <WelcomeCard user={user} />
           <QuickStatsRow latest={latest} />
           <LastSimulationCard latest={latest} />
+          <AchievementsStrip history={history} />
         </div>
       ) : (
         <div className="flex flex-col gap-6">
           <WelcomeCard user={user} />
           <EmptyDashboardState />
+          <AchievementsStrip history={history} />
         </div>
       )}
     </PageContainer>

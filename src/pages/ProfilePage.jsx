@@ -1,11 +1,18 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Calendar, LogOut, AlertCircle, Loader2 } from 'lucide-react'
+import { User, Mail, Calendar, LogOut, AlertCircle, Loader2, Pencil, X } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
+import { useToast } from '../context/ToastContext.jsx'
+import { getProfile, updateProfile } from '../services/profileService.js'
 import PageContainer from '../components/layout/PageContainer.jsx'
+import Input from '../components/ui/Input.jsx'
+import Select from '../components/ui/Select.jsx'
+import Button from '../components/ui/Button.jsx'
 
 const FALLBACK_NAME = 'Pengguna FutureHealth'
 const FALLBACK_VALUE = '-'
+
+const GENDER_OPTIONS = ['Perempuan', 'Laki-laki']
 
 /**
  * Formats an ISO date string into Indonesian long-form date
@@ -25,6 +32,15 @@ function formatJoinDate(createdAt) {
 }
 
 /**
+ * Coerces a raw profile value to a safe display string, falling
+ * back to FALLBACK_VALUE when null/undefined/empty.
+ */
+function displayValue(value) {
+  if (value === null || value === undefined || value === '') return FALLBACK_VALUE
+  return String(value)
+}
+
+/**
  * ProfilePage
  * ----------------------------------------------------------------
  * Authenticated route ("/profile") — user profile and settings
@@ -32,6 +48,9 @@ function formatJoinDate(createdAt) {
  *
  * - Profile details card: avatar placeholder, full name (falls back
  *   to "Pengguna FutureHealth"), email, and account creation date.
+ * - "Data Kesehatan" card: age, gender, height, weight loaded from
+ *   the worker API via profileService. Expandable inline edit form
+ *   saves through PUT /profile (upsert) and feeds back via toast.
  * - Actions section: danger-themed sign-out button. Handles the
  *   async signOut() flow defensively — shows a loading state on the
  *   button and surfaces any error via an inline AlertCircle banner.
@@ -41,14 +60,102 @@ function formatJoinDate(createdAt) {
  */
 export default function ProfilePage() {
   const { user, signOut } = useAuth()
+  const { addToast } = useToast()
   const navigate = useNavigate()
+
+  const [profile, setProfile] = useState(null)
+  const [profileLoadError, setProfileLoadError] = useState(null)
+
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  const [nameField, setNameField] = useState('')
+  const [ageField, setAgeField] = useState('')
+  const [genderField, setGenderField] = useState(GENDER_OPTIONS[1])
+  const [heightField, setHeightField] = useState('')
+  const [weightField, setWeightField] = useState('')
 
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutError, setLogoutError] = useState(null)
 
-  const fullName = user?.user_metadata?.full_name || FALLBACK_NAME
+  // Load the health profile once on mount.
+  useEffect(() => {
+    let isMounted = true
+
+    getProfile().then(({ data, error }) => {
+      if (!isMounted) return
+      if (error) {
+        setProfileLoadError(error.message)
+        return
+      }
+      setProfile(data)
+      setNameField(data?.full_name ?? '')
+      setAgeField(data?.age != null ? String(data.age) : '')
+      setGenderField(data?.gender ?? GENDER_OPTIONS[1])
+      setHeightField(data?.height != null ? String(data.height) : '')
+      setWeightField(data?.weight != null ? String(data.weight) : '')
+    })
+
+    return () => {
+      isMounted = false
+    }
+  }, [])
+
+  const fullName = profile?.full_name || user?.user_metadata?.full_name || FALLBACK_NAME
   const email = user?.email || FALLBACK_VALUE
   const joinDate = formatJoinDate(user?.created_at)
+
+  function getEditValue(value, fallback) {
+    return value || displayValue(fallback)
+  }
+
+  async function handleSave() {
+    setSaveError(null)
+    setIsSaving(true)
+
+    const payload = {
+      full_name: nameField,
+      gender: genderField,
+      ...(ageField !== '' && { age: Number(ageField) }),
+      ...(heightField !== '' && { height: Number(heightField) }),
+      ...(weightField !== '' && { weight: Number(weightField) }),
+    }
+
+    try {
+      const { data, error } = await updateProfile(user.id, payload)
+
+      if (error) {
+        setSaveError(error.message)
+        setIsSaving(false)
+        return
+      }
+
+      setProfile(data)
+      setNameField(data?.full_name ?? '')
+      setAgeField(data?.age != null ? String(data.age) : '')
+      setGenderField(data?.gender ?? GENDER_OPTIONS[1])
+      setHeightField(data?.height != null ? String(data.height) : '')
+      setWeightField(data?.weight != null ? String(data.weight) : '')
+      setIsEditing(false)
+      setIsSaving(false)
+
+      addToast('Data profil berhasil diperbarui.', 'success')
+    } catch {
+      setSaveError('Terjadi kesalahan tak terduga. Silakan coba lagi.')
+      setIsSaving(false)
+    }
+  }
+
+  function handleCancelEdit() {
+    setNameField(profile?.full_name ?? '')
+    setAgeField(profile?.age != null ? String(profile.age) : '')
+    setGenderField(profile?.gender ?? GENDER_OPTIONS[1])
+    setHeightField(profile?.height != null ? String(profile.height) : '')
+    setWeightField(profile?.weight != null ? String(profile.weight) : '')
+    setSaveError(null)
+    setIsEditing(false)
+  }
 
   async function handleSignOut() {
     setLogoutError(null)
@@ -114,6 +221,156 @@ export default function ProfilePage() {
               </div>
             </div>
           </dl>
+        </div>
+
+        {/* Health data card (editable) */}
+        <div className="card">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h3 className="font-semibold text-slate-900">Data Kesehatan</h3>
+              <p className="mt-1 text-sm text-slate-500">
+                Umur, jenis kelamin, tinggi, dan berat badan untuk simulasi yang lebih akurat.
+              </p>
+            </div>
+
+            {!isEditing && !profileLoadError && (
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<Pencil size={14} />}
+                onClick={() => setIsEditing(true)}
+              >
+                Edit
+              </Button>
+            )}
+          </div>
+
+          {profileLoadError && (
+            <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <AlertCircle size={18} className="mt-0.5 shrink-0" />
+              <span>Gagal memuat data kesehatan: {profileLoadError}</span>
+            </div>
+          )}
+
+          {!isEditing && !profileLoadError && (
+            <dl className="mt-6 grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-4">
+              <div>
+                <dt className="text-xs font-medium text-slate-400">Umur</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900">
+                  {getEditValue(profile?.age, `${profile?.age ?? FALLBACK_VALUE} tahun`)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-400">Jenis Kelamin</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900">
+                  {displayValue(profile?.gender)}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-400">Tinggi</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900">
+                  {profile?.height != null ? `${profile.height} cm` : FALLBACK_VALUE}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-xs font-medium text-slate-400">Berat</dt>
+                <dd className="mt-1 text-sm font-semibold text-slate-900">
+                  {profile?.weight != null ? `${profile.weight} kg` : FALLBACK_VALUE}
+                </dd>
+              </div>
+            </dl>
+          )}
+
+          {isEditing && (
+            <div className="mt-6 grid grid-cols-1 gap-4 border-t border-slate-100 pt-6 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Nama Lengkap
+                </label>
+                <Input
+                  value={nameField}
+                  onChange={(e) => setNameField(e.target.value)}
+                  placeholder="Nama lengkap Anda"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">Umur</label>
+                <Input
+                  type="number"
+                  min={10}
+                  max={100}
+                  value={ageField}
+                  onChange={(e) => setAgeField(e.target.value)}
+                  placeholder="cth. 25"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Jenis Kelamin
+                </label>
+                <Select
+                  value={genderField}
+                  onChange={(e) => setGenderField(e.target.value)}
+                  options={GENDER_OPTIONS.map((option) => ({ value: option, label: option }))}
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Tinggi (cm)
+                </label>
+                <Input
+                  type="number"
+                  min={80}
+                  max={250}
+                  value={heightField}
+                  onChange={(e) => setHeightField(e.target.value)}
+                  placeholder="cth. 165"
+                />
+              </div>
+
+              <div>
+                <label className="mb-1.5 block text-sm font-medium text-slate-700">
+                  Berat (kg)
+                </label>
+                <Input
+                  type="number"
+                  min={30}
+                  max={300}
+                  value={weightField}
+                  onChange={(e) => setWeightField(e.target.value)}
+                  placeholder="cth. 60"
+                />
+              </div>
+
+              {saveError && (
+                <div className="flex items-start gap-2 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700 sm:col-span-2">
+                  <AlertCircle size={18} className="mt-0.5 shrink-0" />
+                  <span>{saveError}</span>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2 sm:col-span-2 sm:flex-row">
+                <Button
+                  isLoading={isSaving}
+                  onClick={handleSave}
+                  className="sm:flex-1"
+                >
+                  Simpan
+                </Button>
+                <Button
+                  variant="ghost"
+                  leftIcon={<X size={16} />}
+                  onClick={handleCancelEdit}
+                  disabled={isSaving}
+                >
+                  Batal
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Error banner */}

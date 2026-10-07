@@ -150,3 +150,6 @@ vite.config.ts.timestamp-*
 
 # Browser test snapshots
 .playwright-mcp/
+
+# Wrangler local state
+.wrangler/

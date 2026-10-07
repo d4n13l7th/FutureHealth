@@ -5,13 +5,13 @@ const SELECT_FIELDS = [
   { field: 'sleepHours', label: 'Jam Tidur' },
   { field: 'waterIntake', label: 'Air Putih' },
   { field: 'exerciseFrequency', label: 'Frekuensi Olahraga' },
-  { field: 'screenTime', label: 'Screen Time Harian' },
   { field: 'dietQuality', label: 'Kualitas Pola Makan' },
 ]
 
 const RANGE_FIELDS = [
-  { field: 'stressLevel', label: 'Tingkat Stres' },
-  { field: 'commitmentLevel', label: 'Tingkat Komitmen' },
+  { field: 'stressLevel', label: 'Tingkat Stres', min: 1, max: 10 },
+  { field: 'commitmentLevel', label: 'Tingkat Komitmen', min: 1, max: 10 },
+  { field: 'screenTimeHours', label: 'Screen Time Harian', min: 0, max: 15, step: 0.5, unit: ' jam' },
 ]
 
 /**
@@ -54,14 +54,16 @@ export default function WhatIfControls({ baseInputs = {}, overrides = {}, onChan
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        {RANGE_FIELDS.map(({ field, label }) => (
+        {RANGE_FIELDS.map(({ field, label, min, max, step, unit }) => (
           <WhatIfControl
             key={field}
             label={label}
             field={field}
             type="range"
-            min={1}
-            max={10}
+            min={min}
+            max={max}
+            step={step}
+            unit={unit}
             value={valueOf(field)}
             onChange={handleChange}
           />

@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext.jsx'
 import { motion } from 'framer-motion'
 
@@ -26,6 +26,7 @@ import { motion } from 'framer-motion'
  */
 export default function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
 
   // Variabel animasi untuk konsistensi transisi
   const fadeVariants = {
@@ -54,7 +55,7 @@ export default function ProtectedRoute({ children }) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />
+    return <Navigate to="/auth" replace state={{ from: location.pathname }} />
   }
 
   // Membungkus children agar setiap halaman yang dirender memiliki transisi masuk

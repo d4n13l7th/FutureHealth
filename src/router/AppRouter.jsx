@@ -33,19 +33,22 @@ export default function AppRouter() {
         <Route path="/auth" element={<AuthPage />} />
         <Route path="/sdg" element={<SDGPage />} />
 
-        {/*
-          /simulation, /results, and /compare are PUBLIC so guests
-          can try the simulator. useSimulation.js already guards
-          persistence: `if (user) { saveSimulation(...) }` — guests
-          run the engine but results are never persisted.
-          /compare has its own internal guard (redirects to
-          /simulation if currentInputs is null).
-        */}
-        <Route path="/simulation" element={<SimulationPage />} />
-        <Route path="/results" element={<ResultsPage />} />
-        <Route path="/compare" element={<CompareFuturesPage />} />
-
         {/* Protected routes (require login) */}
+        {/* Simulator requires an account per user directive: mulai
+            simulasi wajib daftar/masuk. Unguarded visitors are sent
+            to /auth and returned to the intended page afterwards. */}
+        <Route
+          path="/simulation"
+          element={<ProtectedRoute><SimulationPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/results"
+          element={<ProtectedRoute><ResultsPage /></ProtectedRoute>}
+        />
+        <Route
+          path="/compare"
+          element={<ProtectedRoute><CompareFuturesPage /></ProtectedRoute>}
+        />
         <Route
           path="/dashboard"
           element={<ProtectedRoute><DashboardPage /></ProtectedRoute>}

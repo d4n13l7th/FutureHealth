@@ -13,6 +13,8 @@
  * - onChange: (field: string, value: string | number) => void
  * - min:      number — for range type
  * - max:      number — for range type
+ * - step:     number — for range type
+ * - unit:     string — optional suffix shown instead of "/max"
  * ----------------------------------------------------------------
  */
 export default function WhatIfControl({
@@ -24,6 +26,8 @@ export default function WhatIfControl({
   onChange,
   min = 1,
   max = 10,
+  step = 1,
+  unit = '',
 }) {
   if (type === 'range') {
     return (
@@ -31,13 +35,14 @@ export default function WhatIfControl({
         <div className="mb-1.5 flex items-center justify-between">
           <span className="text-sm font-medium text-slate-700">{label}</span>
           <span className="text-sm font-semibold text-emerald-600">
-            {value}/{max}
+            {unit ? `${value}${unit}` : `${value}/${max}`}
           </span>
         </div>
         <input
           type="range"
           min={min}
           max={max}
+          step={step}
           value={value ?? min}
           onChange={(e) => onChange(field, Number(e.target.value))}
           className="h-2 w-full cursor-pointer appearance-none rounded-full bg-slate-100 accent-emerald-500"
