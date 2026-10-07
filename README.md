@@ -24,7 +24,7 @@ This project is built to promote healthy habits and directly supports **Sustaina
 * **Icons:** Lucide React
 * **Charts:** Recharts
 * **Animation:** Framer Motion
-* **Backend & Authentication:** Supabase
+* **Backend & Authentication:** Cloudflare Workers + D1 (SQLite)
 * **Routing:** React Router DOM
 * **Linting:** ESLint 10 (flat config)
 
@@ -58,20 +58,28 @@ Follow these steps to run FutureHealth locally on your machine.
 
 3. **Set up environment variables:**
 
-   Copy the example file and fill in your Supabase credentials:
+   Copy the example file and point it to your Cloudflare Worker API:
 
    ```bash
    cp .env.example .env
    ```
 
    ```env
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   VITE_API_URL=https://futurehealth-api.solvox-worker.workers.dev
    ```
 
-4. **Set up the database:**
+4. **Set up the backend (optional — for local development):**
 
-   Run the SQL in `supabase/schema.sql` against your Supabase project (SQL Editor or CLI). This creates the `profiles` and `simulations` tables, row-level security policies, and the `handle_new_user` trigger.
+   The API runs as a Cloudflare Worker (`worker/`) backed by Cloudflare D1. To deploy or apply database migrations:
+
+   ```bash
+   cd worker
+   npm install
+   npx wrangler d1 migrations apply futurehealth-db --remote
+   npx wrangler deploy
+   ```
+
+   The D1 schema (tables `users`, `sessions`, `profiles`, `simulations`) lives in `worker/migrations/0001_init.sql`. See `docs/RENCANA_PENGEMBANGAN.md` for the full architecture and roadmap.
 
 5. **Run the development server:**
 
@@ -100,10 +108,11 @@ FutureHealth follows a modular component architecture:
 * `/src/components` — Reusable UI elements (divided into domains like `/chatbot`, `/compare`, `/results`, plus shared primitives in `/ui`).
 * `/src/hooks` — Custom React hooks for state and data fetching (`useSimulation`, `useChatbot`, `useSimulationHistory`).
 * `/src/pages` — Main pages routed by the application.
-* `/src/services` — Core business logic engines (`simulationEngine.js`, `chatbotEngine.js`) and the Supabase connection.
+* `/src/services` — Core business logic engines (`simulationEngine.js`, `chatbotEngine.js`) and the Cloudflare API client (`api.js`, `backend.js`, `profileService.js`, `achievementService.js`).
 * `/src/context` — Global state management (`AuthContext`, `SimulationContext`, `ToastContext`).
 * `/src/router` / `/src/layouts` — Route definitions (with lazy-loaded page chunks) and the protected app shell.
-* `/supabase` — Database schema (`schema.sql`).
+* `/worker` — Cloudflare Worker API (`src/index.js`) and D1 migrations (`migrations/0001_init.sql`).
+* `/docs` — Development plan & roadmap (`RENCANA_PENGEMBANGAN.md`).
 
 ---
 

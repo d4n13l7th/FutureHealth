@@ -31,9 +31,9 @@ export function useSimulation() {
 
   /**
    * Runs the simulation engine on the given inputs, immediately
-   * updates SimulationContext so the UI can render results without
-   * waiting on the network, then persists the record to Supabase
-   * if the user is authenticated.
+* updates SimulationContext so the UI can render results without
+ * waiting on the network, then persists the record via the worker
+ * API if the user is authenticated.
    *
    * @param {object} inputs - Raw form inputs from SimulationForm
    *   (personal info, lifestyle answers, target, commitmentLevel).
@@ -54,7 +54,7 @@ export function useSimulation() {
         setCurrentInputs(inputs)
         setCurrentResult(result)
 
-        // 3. Persist to Supabase if the user is authenticated.
+        // 3. Persist via the worker API if the user is authenticated.
         // Awaited so save errors can be surfaced to the caller,
         // but the context has already been updated above — a save
         // failure does not block the user from viewing their result.
@@ -62,7 +62,7 @@ export function useSimulation() {
           const { error: saveError } = await saveSimulation(user.id, inputs, result)
 
           if (saveError) {
-            console.error('Gagal menyimpan simulasi ke Supabase:', saveError.message)
+            console.error('Gagal menyimpan simulasi:', saveError.message)
             return { result, error: saveError }
           }
         }

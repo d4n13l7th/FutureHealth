@@ -16,7 +16,7 @@ import { createContext, useContext, useState } from 'react'
  * It does NOT:
  * - run the simulation engine (see hooks/useSimulation.js,
  *   hooks/useWhatIf.js, and services/simulationEngine.js)
- * - read from or write to Supabase (see hooks/useSimulation.js and
+ * - read from or write to the API (see hooks/useSimulation.js and
  *   hooks/useSimulationHistory.js)
  *
  * This keeps SimulationContext a thin, predictable "shared memory"

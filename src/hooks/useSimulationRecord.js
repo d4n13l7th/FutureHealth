@@ -4,8 +4,8 @@ import { getSimulationById } from '../services/backend.js'
 /**
  * useSimulationRecord
  * ----------------------------------------------------------------
- * Data-fetching hook for retrieving a single simulation record from
- * Supabase by its `id` (the `simulations` table, via
+ * Data-fetching hook for retrieving a single simulation record by
+ * its `id` (the `simulations` table, via
  * services/backend.js's getSimulationById).
  *
  * Intended for the /history/:id route: ResultsPage (in its

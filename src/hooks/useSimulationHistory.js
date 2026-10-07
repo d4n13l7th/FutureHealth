@@ -6,7 +6,7 @@ import { getSimulationHistory } from '../services/backend.js'
  * useSimulationHistory
  * ----------------------------------------------------------------
  * Data-fetching hook for retrieving the authenticated user's past
- * simulations from Supabase (the `simulations` table, via
+ * simulations (the `simulations` table, via
  * services/backend.js's getSimulationHistory).
  *
  * Used by DashboardPage (last simulation, active goal summaries)
@@ -33,10 +33,10 @@ export function useSimulationHistory() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  /**
-   * Fetches the current user's simulation history from Supabase
-   * and updates local state accordingly.
-   */
+/**
+    * Fetches the current user's simulation history from the worker
+    * API and updates local state accordingly.
+    */
   const fetchHistory = useCallback(async () => {
     if (!user) {
       setHistory([])

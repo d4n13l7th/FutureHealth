@@ -37,7 +37,7 @@ export default function AppRouter() {
           /simulation, /results, and /compare are PUBLIC so guests
           can try the simulator. useSimulation.js already guards
           persistence: `if (user) { saveSimulation(...) }` — guests
-          run the engine but results are never written to Supabase.
+          run the engine but results are never persisted.
           /compare has its own internal guard (redirects to
           /simulation if currentInputs is null).
         */}

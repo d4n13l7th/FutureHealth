@@ -18,7 +18,7 @@ import PageContainer from '../components/layout/PageContainer.jsx'
  * - Reads location.state.fromRedirect to show an informative
  *   banner when the user was redirected here from /results.
  * - Fetches the authenticated user's profile (height, weight,
- *   age, gender) from Supabase and maps it into SimulationForm's
+ *   age, gender) via the worker API and maps it into SimulationForm's
  *   `initialData` shape so fields auto-fill on mount.
  * ----------------------------------------------------------------
  */

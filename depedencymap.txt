@@ -119,7 +119,8 @@ futurehealth/
 │   │   └── useChatbot.js
 │   │
 │   ├── services/
-│   │   ├── supabase.js
+│   │   ├── api.js
+│   │   ├── backend.js
 │   │   ├── simulationEngine.js
 │   │   ├── chatbotEngine.js
 │   │   ├── profileService.js
@@ -148,7 +149,7 @@ futurehealth/
 | Page | Purpose | Depends On |
 |---|---|---|
 | `LandingPage.jsx` | Public marketing page (hero, problem, how-it-works, CTA) | `landing/*`, `MainLayout` |
-| `AuthPage.jsx` | Login/Register with email + Google | `AuthContext`, `services/supabase.js` |
+| `AuthPage.jsx` | Login/Register with email (+ Google sebagai rencana) | `AuthContext`, `services/backend.js`, `services/api.js` |
 | `DashboardPage.jsx` | Authenticated home: score summary, active goal, last simulation, achievements | `AuthContext`, `dashboard/*`, `useSimulationHistory` |
 | `SimulationPage.jsx` | Multi-step form to collect inputs and trigger simulation | `simulation/*`, `useSimulation`, `SimulationContext` |
 | `ResultsPage.jsx` | Full results dashboard (score, future self, timeline, charts, insights, what-if) | `results/*`, `whatif/*`, `chatbot/ChatWidget`, `SimulationContext` |
@@ -224,7 +225,7 @@ futurehealth/
 - **Input**, **Select**, **Slider** — form primitives used across Simulation & WhatIf
 - **Badge** — colored pill for categories/risk levels (Sangat Baik/Baik/Sedang/Berisiko, Rendah/Sedang/Tinggi)
 - **Modal** — confirmation dialogs (e.g., delete simulation)
-- **Spinner** — loading states for Supabase calls
+- **Spinner** — loading states for Cloudflare Worker API calls
 - **Tabs** — used in Results (e.g., Overview / Insights / What-If / Narrative tabs)
 - **ProgressBar** — linear progress (wizard steps, achievement progress)
 
@@ -248,11 +249,12 @@ futurehealth/
 
 | Service | Responsibility | Used By |
 |---|---|---|
-| `supabase.js` | Client init, auth helpers (`signUpWithEmail`, `signInWithGoogle`, etc.), simulation CRUD — **exists** | `AuthContext`, `useSimulationHistory`, `profileService` |
+| `api.js` | `fetch` wrapper atas Cloudflare Worker API (`VITE_API_URL`), token handling (`setToken`/`clearToken`/`getToken`), Error + HTTP 401 handling — **exists** | semua service, `AuthContext` |
+| `backend.js` | Auth helpers (`signUpWithEmail`, `signInWithEmail`, `getCurrentUser`, `signOut`), profile & simulation CRUD via Worker API — **exists** | `AuthContext`, `useSimulationHistory`, `profileService` |
 | `simulationEngine.js` | Pure deterministic simulation logic — **exists** | `useSimulation`, `useWhatIf`, `CompareFuturesPage`, `useChatbot` |
 | `chatbotEngine.js` | **New.** Rule-based response engine that maps user questions/intents to canned-but-contextual answers, pulling live data from the current `SimulationContext` result (score, insights, recommendations, narrative) to "personalize" replies without an LLM | `useChatbot` |
-| `profileService.js` | **New.** Wraps Supabase `profiles` table CRUD (get/update profile, age/height/weight defaults for pre-filling Simulation form) | `ProfilePage`, `SimulationForm` (prefill) |
-| `achievementService.js` | **New.** Pure logic to evaluate achievement unlock conditions (Future Planner, Health Explorer, Consistency Builder, Future Architect) against history data; optionally persists unlocked achievements to a Supabase `achievements` table | `AchievementsStrip`, `DashboardPage` |
+| `profileService.js` | **New.** Wraps Worker API `GET/PUT /profile` (get/update profile, age/height/weight defaults for pre-filling Simulation form) | `ProfilePage`, `SimulationForm` (prefill) |
+| `achievementService.js` | **New.** Pure logic to evaluate achievement unlock conditions (Future Planner, Health Explorer, Consistency Builder, Future Architect) against history data; optionally persists unlocked achievements via a Worker API `achievements` table (D1) | `AchievementsStrip`, `DashboardPage` |
 
 ---
 
@@ -261,7 +263,7 @@ futurehealth/
 | Context | State | Purpose |
 |---|---|---|
 | `AuthContext` | `user`, `session`, `loading`, auth methods | Global session awareness; wraps entire `App`; consumed by `ProtectedRoute`, `Navbar`, `ProfilePage` |
-| `SimulationContext` | `currentInputs`, `currentResult`, `whatIfResult`, setters | Holds the "active" simulation in memory so `SimulationPage → ResultsPage` (and `WhatIfPanel`, `ChatWidget`) share state without re-fetching or prop-drilling. Persisted result also saved to Supabase via `useSimulation` |
+| `SimulationContext` | `currentInputs`, `currentResult`, `whatIfResult`, setters | Holds the "active" simulation in memory so `SimulationPage → ResultsPage` (and `WhatIfPanel`, `ChatWidget`) share state without re-fetching or prop-drilling. Persisted result also saved via Worker API (`useSimulation` → `backend.saveSimulation`) |
 | `ToastContext` | queue of toast notifications | Lightweight global feedback (save success, errors, achievement unlocked) — avoids prop drilling alert state into deep components |
 
 **Provider nesting in `App.jsx`:**
@@ -302,30 +304,31 @@ All routes render inside `MainLayout` (Navbar + Footer + `<Outlet/>` + global `C
 ## 9. State Management Strategy
 
 - **No Redux/Zustand** — app scope doesn't warrant it. React Context + hooks is sufficient and keeps bundle small.
-- **Server state (Supabase)** — fetched via dedicated hooks (`useSimulationHistory`, `useAuth`) using local `useState`/`useEffect` + simple caching (re-fetch on mount/focus). If the app grows, this is the natural seam to introduce **TanStack Query** later (see scalability plan).
+- **Server state (Cloudflare Worker API / D1)** — fetched via dedicated hooks (`useSimulationHistory`, `useAuth`) using local `useState`/`useEffect` + simple caching (re-fetch on mount/focus). If the app grows, this is the natural seam to introduce **TanStack Query** later (see scalability plan).
 - **Ephemeral UI state** — local `useState` inside components (form steps, modal open/close, chat panel open).
-- **Cross-page simulation state** — `SimulationContext` (in-memory only; the *source of truth* for "what the user is currently looking at"). Supabase is the source of truth for *persisted history*.
+- **Cross-page simulation state** — `SimulationContext` (in-memory only; the *source of truth* for "what the user is currently looking at"). Cloudflare Worker API (D1) is the source of truth for *persisted history*.
 - **What-If state** — isolated in `useWhatIf` (derives from `SimulationContext.currentInputs` + local overrides), never mutates the base result — always recomputed via `runWhatIf()`.
 - **Derived data** — never stored; always computed via `simulationEngine` pure functions from canonical inputs, so results are always consistent and reproducible.
 
 ---
 
-## 10. Supabase Integration Plan
+## 10. Cloudflare Worker (API + D1) Integration Plan
 
 **Auth**
-- Email/password + Google OAuth via `supabase.auth`
-- `AuthContext` subscribes to `onAuthStateChange` once at app root
+- Email/password via Worker API (`POST /auth/register`, `POST /auth/login`); Google OAuth sebagai rencana masa depan
+- `AuthContext` calls `getCurrentUser()` (`GET /auth/me`) on mount; bearer token disimpan di `localStorage` (`futurehealth_token`, TTL 30 hari)
+- Sign-out via `POST /auth/logout` + `clearToken()`
 
-**Tables** (as already scaffolded in `supabase.js` comments)
-- `profiles` — id (FK to auth.users), full_name, age, gender, height_cm, weight_kg
-- `simulations` — id, user_id, inputs (jsonb), results (jsonb), health_score, target, created_at
+**Tables** (as already scaffolded in `worker/migrations/0001_init.sql` — D1/SQLite)
+- `profiles` — id (FK to users), full_name, age, gender, height_cm, weight_kg
+- `simulations` — id, user_id, inputs (text/JSON string), results (text/JSON string), health_score, target, created_at
 - **New:** `achievements` — id, user_id, achievement_key, unlocked_at (for persistence across sessions)
 
-**RLS**: per-user policies on all tables (already defined for profiles/simulations; extend pattern to achievements)
+**Isolation**: no PostgreSQL/RLS. Every worker route calls `requireUser()` and queries with `WHERE user_id = ?`, so a user can only read/write their own rows.
 
 **Data flow**
 1. `SimulationPage` submit → `runSimulation(inputs)` (pure, client-side) → result shown immediately on `ResultsPage` via `SimulationContext` (no network wait for UX)
-2. Async, fire-and-forget: `saveSimulation(userId, inputs, results)` → Supabase
+2. Async, fire-and-forget: `saveSimulation(userId, inputs, results)` → `POST /simulations` (Worker API → D1)
 3. `HistoryPage` / `DashboardPage` → `getSimulationHistory(userId)` on mount via `useSimulationHistory`
 4. `ProfilePage` prefill → `profileService.getProfile(userId)`; edits → `upsert` to `profiles`
 5. Achievement checks run client-side against fetched history (`achievementService.evaluate(history)`) after each new simulation save
@@ -374,7 +377,7 @@ ChatWidget (global, mounted in MainLayout for authenticated routes)
   2. For data-driven intents, pull live values from `simulationResult` (e.g., "Skor kesehatan Anda saat ini adalah {currentScore}, kategori {category}...")
   3. For knowledge intents (SDG, app usage), return curated static copy from `constants.js`
   4. Fallback: suggest using `WhatIfPanel` or rephrasing
-- Fully synchronous, no network calls → instant responses, zero cost, zero external dependency, but interface (`respond(message, context) → Promise<string>`) is async-shaped so a future LLM backend (Supabase Edge Function) can be substituted without touching UI components.
+- Fully synchronous, no network calls → instant responses, zero cost, zero external dependency, but interface (`respond(message, context) → Promise<string>`) is async-shaped so a future LLM backend (Cloudflare Worker route) can be substituted without touching UI components.
 
 ---
 
@@ -411,7 +414,7 @@ ResultsPage
 ## 14. Future Scalability Plan
 
 1. **Server-state library**: introduce TanStack Query for `useSimulationHistory`/`useAuth` once caching/pagination of history grows (e.g., infinite scroll on `HistoryPage`).
-2. **Chatbot upgrade path**: `chatbotEngine.respond()` signature already async — can be backed by a Supabase Edge Function calling an LLM with `simulationResult` as context, without changing `useChatbot` or UI.
+2. **Chatbot upgrade path**: `chatbotEngine.respond()` signature already async — can be backed by a Cloudflare Worker route calling an LLM with `simulationResult` as context, without changing `useChatbot` or UI.
 3. **i18n**: all user-facing strings currently in Indonesian and centralized in `simulationEngine.js` (messages) and `constants.js` (UI copy) — straightforward to extract into `locales/id.json` / `locales/en.json` with `react-i18next` later.
 4. **Design system growth**: `components/ui/` is isolated enough to extract into a separate internal package if FutureHealth spawns sibling apps (e.g., admin dashboard).
 5. **Achievements expansion**: `achievementService.js` uses a declarative rule list (`{ key, condition: (history) => bool }`) — new achievements are just new rule entries, no UI changes needed beyond `AchievementsStrip` iterating the list.

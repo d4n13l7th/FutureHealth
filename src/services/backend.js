@@ -3,8 +3,7 @@
  * ----------------------------------------------------------------
  * Client service layer for the FutureHealth API (Cloudflare
  * Workers + D1). This module is the single point of contact for
- * auth, profile, and simulation persistence — it replaces the old
- * Supabase client.
+ * auth, profile, and simulation persistence.
  *
  * Every function returns `{ data, error }` (or `{ error }`) so
  * callers integrating with ToastContext and form handling keep

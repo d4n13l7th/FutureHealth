@@ -1,10 +1,9 @@
 -- ----------------------------------------------------------------
 -- FutureHealth — Cloudflare D1 schema (SQLite)
 -- ----------------------------------------------------------------
--- Backend for the FutureHealth React app. Replacements for the old
--- Supabase tables (profiles & simulations) plus the auth internals
--- (email/password users + opaque bearer-token sessions) that Supabase
--- used to provide.
+-- Backend for the FutureHealth React app: the profiles and
+-- simulations tables plus the auth internals (email/password
+-- users + opaque bearer-token sessions).
 --
 -- Note: D1 is SQLite. Ids are TEXT (crypto.randomUUID()), timestamps
 -- are ISO-8601 strings.

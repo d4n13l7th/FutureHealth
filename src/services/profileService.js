@@ -28,7 +28,7 @@ import { getProfile as fetchProfile, updateProfile as saveProfile } from './back
  * the React app and simulationEngine.js.
  *
  * @param {string} _userId - The auth user's UUID (unused by the API;
- *   kept for signature compatibility with the old Supabase client).
+ *   kept for signature compatibility with the old backend client).
  * @returns {Promise<{ data: object|null, error: Error|null }>}
  */
 export async function getProfile(_userId) {
@@ -57,7 +57,7 @@ export async function getProfile(_userId) {
  * database column names before sending the payload.
  *
  * @param {string} userId - The auth user's UUID (unused by the API;
- *   kept for signature compatibility with the old Supabase client).
+ *   kept for signature compatibility with the old backend client).
  * @param {object} profileData - Frontend-shaped profile fields.
  *   Accepted keys: full_name, age, gender, height, weight
  *   (plus any other `profiles` columns the caller wants to set).
