@@ -5,9 +5,11 @@ import {
   Heart,
   Target,
   ChevronRight,
+  ChevronLeft,
   ChevronUp,
   ChevronDown,
   Loader2,
+  Check,
 } from 'lucide-react'
 import {
   SIMULATION_OPTIONS,
@@ -35,6 +37,16 @@ const SMOKING_STATUS_OPTIONS = ['Tidak Merokok', 'Mantan Perokok', 'Perokok Akti
 const ALCOHOL_CONSUMPTION_OPTIONS = ['Tidak Pernah', 'Jarang', 'Sering']
 const CHECKUP_FREQUENCY_OPTIONS = ['Rutin', 'Jarang', 'Tidak Pernah']
 const SCREEN_TIME_MAX_HOURS = 15
+
+/**
+ * Wizard steps — each carries its icon, short label, and the section
+ * card(s) rendered for that step (see renderStep below).
+ */
+const WIZARD_STEPS = [
+  { icon: User, label: 'Data Diri' },
+  { icon: Activity, label: 'Gaya Hidup' },
+  { icon: Target, label: 'Target' },
+]
 
 /**
  * Clamps a value into the [min, max] range.
@@ -258,16 +270,16 @@ function ComputedScoreField({ label, value, note }) {
 /**
  * SimulationForm
  * ----------------------------------------------------------------
- * Multi-section input form for SimulationPage, collecting:
+ * 3-langkah wizard input form untuk SimulationPage:
  *
  * 1. Data Diri        — age (dropdown + stepper), gender (segmented),
  *                         height (cm), weight (kg)
  * 2. Gaya Hidup        — sleepHours, waterIntake, exerciseFrequency,
- *                         dietQuality (all from SIMULATION_OPTIONS)
- * 3. Kebiasaan & Medis — computed stress, screenTimeHours (slider),
+ *                         dietQuality (dari SIMULATION_OPTIONS),
+ *                         computed stress, screenTimeHours (slider),
  *                         smokingStatus, alcoholConsumption,
  *                         checkupFrequency
- * 4. Target            — target (SIMULATION_OPTIONS.targets) and the
+ * 3. Target            — target (SIMULATION_OPTIONS.targets) dan
  *                         computed commitment score
  *
  * Stres dan komitmen TIDAK lagi diisi manual. Keduanya dihitung
@@ -277,6 +289,12 @@ function ComputedScoreField({ label, value, note }) {
  * (screenTimeHours) dan diubah ke label kategorinya saat submit
  * agar tetap kompatibel dengan chatbot/insight engine.
  *
+ * Navigasi: tombol "Lanjut" / "Kembali", progress bar linear di
+ * atas, pill steps yang bisa diklik kembali ke langkah sebelumnya,
+ * dan transisi slide+fade antar langkah (`.animate-step-slide`).
+ * Tombol "Lanjut" adalah type="submit" sehingga Enter di dalam step
+ * juga maju; form hanya benar-benar dikirim pada langkah terakhir.
+ *
  * `formData` is initialized from DEFAULT_FORM_DATA merged with
  * `initialData`. On submit, calls onSubmit(inputs) where `inputs`
  * includes the derived stressLevel, commitmentLevel, screenTime, and
@@ -285,8 +303,9 @@ function ComputedScoreField({ label, value, note }) {
  * match simulationEngine.js's expected `inputs` shape exactly
  * (notably `height`/`weight`, not `height_cm`/`weight_kg`).
  *
- * `isSubmitting` (default false) disables the submit button and
- * shows a loading spinner — preserves SimulationPage's existing
+ * `isSubmitting` (default false) disables navigation and the submit
+ * button, and shows a loading spinner on the last step — preserves
+ * SimulationPage's existing
  * <SimulationForm onSubmit={...} isSubmitting={isSimulating} />
  * usage.
  *
@@ -294,10 +313,13 @@ function ComputedScoreField({ label, value, note }) {
  * ----------------------------------------------------------------
  */
 export default function SimulationForm({ initialData = {}, onSubmit, isSubmitting = false }) {
+  const [step, setStep] = useState(0)
   const [formData, setFormData] = useState(() => ({
     ...DEFAULT_FORM_DATA,
     ...initialData,
   }))
+
+  const isLastStep = step === WIZARD_STEPS.length - 1
 
   function handleChange(field, value) {
     setFormData((previous) => ({ ...previous, [field]: value }))
@@ -317,8 +339,27 @@ export default function SimulationForm({ initialData = {}, onSubmit, isSubmittin
   const liveStress = calculateStressScore(computedInputs)
   const liveCommitment = calculateCommitmentScore(computedInputs)
 
+  /**
+   * Step 1 (Data Diri) requires plausible height/weight before the
+   * user can proceed — the "Lanjut" button and Enter-to-advance both
+   * route through this guard.
+   */
+  function isStepValid() {
+    if (step !== 0) return true
+    const height = Number(formData.height)
+    const weight = Number(formData.weight)
+    return (
+      Number.isFinite(height) && height >= 100 && height <= 250 &&
+      Number.isFinite(weight) && weight >= 20 && weight <= 250
+    )
+  }
+
   function handleSubmit(event) {
     event.preventDefault()
+    if (!isLastStep) {
+      if (isStepValid()) setStep((current) => current + 1)
+      return
+    }
     const screenTimeHours = resolveScreenTimeHours()
     onSubmit({
       ...formData,
@@ -329,122 +370,128 @@ export default function SimulationForm({ initialData = {}, onSubmit, isSubmittin
     })
   }
 
-  return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* 1. Data Diri */}
-      <div className="card">
-        <div className="mb-4 flex items-center gap-2">
-          <User size={18} className="text-emerald-500" />
-          <h3 className="font-semibold text-slate-900">Data Diri</h3>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <AgeField
-            value={formData.age}
-            onChange={(value) => handleChange('age', value)}
-          />
-          <RadioGroupField
-            label="Jenis Kelamin"
-            value={formData.gender}
-            onChange={(value) => handleChange('gender', value)}
-            options={GENDER_OPTIONS}
-          />
-          <NumberField
-            label="Tinggi Badan"
-            value={formData.height}
-            onChange={(value) => handleChange('height', value)}
-            min={100}
-            max={250}
-            suffix="cm"
-          />
-          <NumberField
-            label="Berat Badan"
-            value={formData.weight}
-            onChange={(value) => handleChange('weight', value)}
-            min={20}
-            max={250}
-            suffix="kg"
-          />
-        </div>
-      </div>
-
-      {/* 2. Gaya Hidup */}
-      <div className="card">
-        <div className="mb-4 flex items-center gap-2">
-          <Activity size={18} className="text-emerald-500" />
-          <h3 className="font-semibold text-slate-900">Gaya Hidup</h3>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <SelectField
-            label="Jam Tidur Rata-rata"
-            value={formData.sleepHours}
-            onChange={(value) => handleChange('sleepHours', value)}
-            options={SIMULATION_OPTIONS.sleepHours}
-          />
-          <SelectField
-            label="Konsumsi Air Putih"
-            value={formData.waterIntake}
-            onChange={(value) => handleChange('waterIntake', value)}
-            options={SIMULATION_OPTIONS.waterIntake}
-          />
-          <SelectField
-            label="Frekuensi Olahraga"
-            value={formData.exerciseFrequency}
-            onChange={(value) => handleChange('exerciseFrequency', value)}
-            options={SIMULATION_OPTIONS.exerciseFrequency}
-          />
-          <SelectField
-            label="Kualitas Pola Makan"
-            value={formData.dietQuality}
-            onChange={(value) => handleChange('dietQuality', value)}
-            options={SIMULATION_OPTIONS.dietQuality}
-          />
-        </div>
-      </div>
-
-      {/* 3. Kebiasaan & Medis */}
-      <div className="card">
-        <div className="mb-4 flex items-center gap-2">
-          <Heart size={18} className="text-emerald-500" />
-          <h3 className="font-semibold text-slate-900">Kebiasaan &amp; Medis</h3>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <ComputedScoreField
-            label="Tingkat Stres"
-            value={liveStress}
-            note="Dihitung otomatis dari kebiasaan gaya hidup Anda — semakin sehat, semakin rendah stres."
-          />
+  function renderStep(current) {
+    if (current === 0) {
+      return (
+        <div className="card">
+          <div className="mb-4 flex items-center gap-2">
+            <User size={18} className="text-emerald-500" />
+            <h3 className="font-semibold text-slate-900">Data Diri</h3>
+          </div>
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <ScreenTimeField
-              value={formData.screenTimeHours}
-              onChange={(value) => handleChange('screenTimeHours', value)}
+            <AgeField
+              value={formData.age}
+              onChange={(value) => handleChange('age', value)}
             />
-            <SelectField
-              label="Status Merokok"
-              value={formData.smokingStatus}
-              onChange={(value) => handleChange('smokingStatus', value)}
-              options={SMOKING_STATUS_OPTIONS}
+            <RadioGroupField
+              label="Jenis Kelamin"
+              value={formData.gender}
+              onChange={(value) => handleChange('gender', value)}
+              options={GENDER_OPTIONS}
             />
-            <SelectField
-              label="Konsumsi Alkohol"
-              value={formData.alcoholConsumption}
-              onChange={(value) => handleChange('alcoholConsumption', value)}
-              options={ALCOHOL_CONSUMPTION_OPTIONS}
+            <NumberField
+              label="Tinggi Badan"
+              value={formData.height}
+              onChange={(value) => handleChange('height', value)}
+              min={100}
+              max={250}
+              suffix="cm"
             />
-            <SelectField
-              label="Frekuensi Medical Check-up"
-              value={formData.checkupFrequency}
-              onChange={(value) => handleChange('checkupFrequency', value)}
-              options={CHECKUP_FREQUENCY_OPTIONS}
+            <NumberField
+              label="Berat Badan"
+              value={formData.weight}
+              onChange={(value) => handleChange('weight', value)}
+              min={20}
+              max={250}
+              suffix="kg"
             />
           </div>
         </div>
-      </div>
+      )
+    }
 
-      {/* 4. Target */}
+    if (current === 1) {
+      return (
+        <>
+          <div className="card">
+            <div className="mb-4 flex items-center gap-2">
+              <Activity size={18} className="text-emerald-500" />
+              <h3 className="font-semibold text-slate-900">Gaya Hidup</h3>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <SelectField
+                label="Jam Tidur Rata-rata"
+                value={formData.sleepHours}
+                onChange={(value) => handleChange('sleepHours', value)}
+                options={SIMULATION_OPTIONS.sleepHours}
+              />
+              <SelectField
+                label="Konsumsi Air Putih"
+                value={formData.waterIntake}
+                onChange={(value) => handleChange('waterIntake', value)}
+                options={SIMULATION_OPTIONS.waterIntake}
+              />
+              <SelectField
+                label="Frekuensi Olahraga"
+                value={formData.exerciseFrequency}
+                onChange={(value) => handleChange('exerciseFrequency', value)}
+                options={SIMULATION_OPTIONS.exerciseFrequency}
+              />
+              <SelectField
+                label="Kualitas Pola Makan"
+                value={formData.dietQuality}
+                onChange={(value) => handleChange('dietQuality', value)}
+                options={SIMULATION_OPTIONS.dietQuality}
+              />
+            </div>
+          </div>
+
+          <div className="card">
+            <div className="mb-4 flex items-center gap-2">
+              <Heart size={18} className="text-emerald-500" />
+              <h3 className="font-semibold text-slate-900">Kebiasaan &amp; Medis</h3>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <ComputedScoreField
+                label="Tingkat Stres"
+                value={liveStress}
+                note="Dihitung otomatis dari kebiasaan gaya hidup Anda — semakin sehat, semakin rendah stres."
+              />
+
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <ScreenTimeField
+                  value={formData.screenTimeHours}
+                  onChange={(value) => handleChange('screenTimeHours', value)}
+                />
+                <SelectField
+                  label="Status Merokok"
+                  value={formData.smokingStatus}
+                  onChange={(value) => handleChange('smokingStatus', value)}
+                  options={SMOKING_STATUS_OPTIONS}
+                />
+                <SelectField
+                  label="Konsumsi Alkohol"
+                  value={formData.alcoholConsumption}
+                  onChange={(value) => handleChange('alcoholConsumption', value)}
+                  options={ALCOHOL_CONSUMPTION_OPTIONS}
+                />
+                <SelectField
+                  label="Frekuensi Medical Check-up"
+                  value={formData.checkupFrequency}
+                  onChange={(value) => handleChange('checkupFrequency', value)}
+                  options={CHECKUP_FREQUENCY_OPTIONS}
+                />
+              </div>
+            </div>
+          </div>
+        </>
+      )
+    }
+
+    return (
       <div className="card">
         <div className="mb-4 flex items-center gap-2">
           <Target size={18} className="text-emerald-500" />
@@ -465,16 +512,110 @@ export default function SimulationForm({ initialData = {}, onSubmit, isSubmittin
           />
         </div>
       </div>
+    )
+  }
 
-      {/* Submit */}
-      <button
-        type="submit"
-        disabled={isSubmitting}
-        className="btn-primary justify-center disabled:cursor-not-allowed disabled:opacity-60"
-      >
-        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <ChevronRight size={18} />}
-        Jalankan Simulasi
-      </button>
+  return (
+    <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      {/* Wizard header + linear progress */}
+      <div className="card">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-slate-900">
+            Simulasi Kesehatan
+          </h3>
+          <span className="text-sm font-medium text-slate-400">
+            Langkah {step + 1} dari {WIZARD_STEPS.length}
+          </span>
+        </div>
+
+        <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-[width] duration-500 ease-out"
+            style={{ width: `${((step + 1) / WIZARD_STEPS.length) * 100}%` }}
+          />
+        </div>
+
+        <div className="mt-4 grid grid-cols-3 gap-2">
+          {WIZARD_STEPS.map((wizardStep, index) => {
+            const active = index === step
+            const done = index < step
+            const reachable = index <= step
+            return (
+              <button
+                key={wizardStep.label}
+                type="button"
+                disabled={!reachable || isSubmitting}
+                onClick={() => setStep(index)}
+                aria-current={active ? 'step' : undefined}
+                className={[
+                  'flex items-center justify-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold transition',
+                  'disabled:cursor-not-allowed',
+                  active && 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500',
+                  done && !active && 'bg-emerald-500 text-white',
+                  !active && !done && 'bg-slate-100 text-slate-400',
+                ].join(' ')}
+              >
+                {done ? <Check size={14} /> : <wizardStep.icon size={14} />}
+                <span className="hidden sm:inline">{wizardStep.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Current step content — key re-triggers the slide+fade */}
+      <div key={step} className="flex flex-col gap-6 animate-step-slide">
+        {renderStep(step)}
+      </div>
+
+      {/* Step validation hint */}
+      {step === 0 && !isStepValid() && (
+        <p className="-mt-2 text-xs font-medium text-amber-600">
+          Tinggi dan berat badan harus berupa angka dalam rentang yang wajar agar
+          simulasi akurat.
+        </p>
+      )}
+
+      {/* Footer navigation */}
+      <div className="flex items-center justify-between gap-3">
+        {step > 0 ? (
+          <button
+            type="button"
+            disabled={isSubmitting}
+            onClick={() => setStep((current) => current - 1)}
+            className="btn-secondary justify-center disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <ChevronLeft size={18} />
+            Kembali
+          </button>
+        ) : (
+          <span className="grow" />
+        )}
+
+        {isLastStep ? (
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="btn-primary justify-center disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {isSubmitting ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <ChevronRight size={18} />
+            )}
+            Jalankan Simulasi
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={!isStepValid() || isSubmitting}
+            className="btn-primary justify-center disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Lanjut
+            <ChevronRight size={18} />
+          </button>
+        )}
+      </div>
     </form>
   )
 }

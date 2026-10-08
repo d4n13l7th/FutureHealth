@@ -1,4 +1,5 @@
 import { Loader2, AlertCircle } from 'lucide-react'
+import { motion } from 'framer-motion'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useSimulationHistory } from '../hooks/useSimulationHistory.js'
 import PageContainer from '../components/layout/PageContainer.jsx'
@@ -7,6 +8,21 @@ import EmptyDashboardState from '../components/dashboard/EmptyDashboardState.jsx
 import QuickStatsRow from '../components/dashboard/QuickStatsRow.jsx'
 import LastSimulationCard from '../components/dashboard/LastSimulationCard.jsx'
 import AchievementsStrip from '../components/dashboard/AchievementsStrip.jsx'
+
+/**
+ * Stagger + fade variants for the dashboard sections, matching the
+ * spec's micro-interactions: opacity 0 -> 1 with a subtle y lift
+ * (400ms ease-out) and an 80ms stagger between cards.
+ */
+const dashContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08 } },
+}
+
+const dashItem = {
+  hidden: { opacity: 0, y: 8 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.4, ease: 'easeOut' } },
+}
 
 /**
  * DashboardPage
@@ -54,18 +70,42 @@ export default function DashboardPage() {
   return (
     <PageContainer className="py-12">
       {hasHistory ? (
-        <div className="flex flex-col gap-6">
-          <WelcomeCard user={user} />
-          <QuickStatsRow latest={latest} />
-          <LastSimulationCard latest={latest} />
-          <AchievementsStrip history={history} />
-        </div>
+        <motion.div
+          className="flex flex-col gap-6"
+          variants={dashContainer}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div variants={dashItem}>
+            <WelcomeCard user={user} />
+          </motion.div>
+          <motion.div variants={dashItem}>
+            <QuickStatsRow latest={latest} />
+          </motion.div>
+          <motion.div variants={dashItem}>
+            <LastSimulationCard latest={latest} />
+          </motion.div>
+          <motion.div variants={dashItem}>
+            <AchievementsStrip history={history} />
+          </motion.div>
+        </motion.div>
       ) : (
-        <div className="flex flex-col gap-6">
-          <WelcomeCard user={user} />
-          <EmptyDashboardState />
-          <AchievementsStrip history={history} />
-        </div>
+        <motion.div
+          className="flex flex-col gap-6"
+          variants={dashContainer}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div variants={dashItem}>
+            <WelcomeCard user={user} />
+          </motion.div>
+          <motion.div variants={dashItem}>
+            <EmptyDashboardState />
+          </motion.div>
+          <motion.div variants={dashItem}>
+            <AchievementsStrip history={history} />
+          </motion.div>
+        </motion.div>
       )}
     </PageContainer>
   )

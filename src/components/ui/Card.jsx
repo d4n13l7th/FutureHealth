@@ -7,11 +7,11 @@ const PADDING_CLASSES = {
 }
 
 const BASE_CLASSES =
-  'rounded-2xl bg-white shadow-xl shadow-slate-200/40 border border-slate-100 overflow-hidden'
+  'rounded-2xl bg-white shadow-card border border-slate-100 overflow-hidden'
 
 const INTERACTIVE_CLASSES =
-  'cursor-pointer transition-all hover:shadow-2xl hover:-translate-y-1 ' +
-  'hover:shadow-emerald-500/10 hover:border-emerald-100'
+  'cursor-pointer transition-all hover:shadow-card-hover hover:-translate-y-1 ' +
+  'hover:border-emerald-100'
 
 /**
  * Joins class fragments, skipping falsy values, and collapses

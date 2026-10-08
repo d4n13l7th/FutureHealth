@@ -2,33 +2,70 @@
  * theme.css
  * ----------------------------------------------------------------
  * @layer components — extracted reusable class compositions.
- * Keeps index.css clean as the project grows.
- * Imported by index.css.
+ * Canonical source for component classes (index.css no longer
+ * duplicates these). Imported by index.css.
  * ----------------------------------------------------------------
  */
 
 @layer components {
+  /* Primary action — emerald→sky gradient (featured / CTA) */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-emerald-500/40 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:from-emerald-600 hover:to-sky-600 hover:shadow-emerald-500/40 active:scale-[0.98];
   }
+
   .btn-secondary {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-6 py-3 font-semibold text-slate-900 transition-all hover:border-emerald-300 hover:bg-emerald-50 active:scale-[0.98];
   }
+
   .btn-ghost {
     @apply inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3 font-semibold text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900 active:scale-[0.98];
   }
+
+  /* Card — wellness-meets-tech: soft shadow, no heavy elevation */
   .card {
-    @apply rounded-3xl border border-slate-100 bg-white p-6 shadow-sm transition-shadow hover:shadow-md;
+    @apply rounded-3xl border border-slate-100 bg-white p-6 transition-shadow duration-300;
+    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
   }
+
+  /* Interactive card — lift + emerald glow on hover */
+  .card-interactive {
+    transition:
+      transform 0.3s ease,
+      box-shadow 0.3s ease,
+      border-color 0.3s ease;
+  }
+  .card-interactive:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.12);
+    border-color: rgb(209 250 229);
+  }
+
+  /* Emerald→sky gradient text for headlines */
+  .text-gradient {
+    @apply bg-gradient-to-r from-emerald-500 to-sky-500 bg-clip-text text-transparent;
+  }
+
+  /* Animated wellness mesh backdrop (landing hero, CTA bands) */
+  .mesh-bg {
+    background:
+      radial-gradient(at 18% 28%, rgba(16, 185, 129, 0.10) 0, transparent 55%),
+      radial-gradient(at 82% 18%, rgba(14, 165, 233, 0.10) 0, transparent 55%),
+      radial-gradient(at 50% 82%, rgba(251, 191, 36, 0.07) 0, transparent 50%);
+    background-color: #f8fafc;
+  }
+
   .input-field {
     @apply w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm text-slate-900 outline-none transition-colors focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100;
   }
+
   .label-text {
     @apply mb-1.5 block text-sm font-medium text-slate-700;
   }
+
   .section-title {
     @apply text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl;
   }
+
   .pill {
     @apply inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700;
   }

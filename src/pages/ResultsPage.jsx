@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Navigate, useParams, Link } from 'react-router-dom'
 import {
   LayoutGrid,
@@ -36,6 +37,17 @@ const ALL_TABS = [
   { id: 'whatif', label: 'What-If', icon: SlidersHorizontal },
   { id: 'narrative', label: 'Narrative', icon: FileText },
 ]
+
+/**
+ * Framer-motion variants for the tab transition: a directional
+ * slide (x ±12) paired with a 200ms opacity fade, per the spec's
+ * micro-interaction language for tab switches.
+ */
+const tabVariants = {
+  enter: (direction) => ({ opacity: 0, x: direction > 0 ? 12 : -12 }),
+  center: { opacity: 1, x: 0 },
+  exit: (direction) => ({ opacity: 0, x: direction > 0 ? -12 : 12 }),
+}
 
 /**
  * Formats an ISO date string into Indonesian long-form date
@@ -87,6 +99,14 @@ export default function ResultsPage() {
   const isReadOnly = Boolean(id)
 
   const [activeTab, setActiveTab] = useState('overview')
+  const [tabDirection, setTabDirection] = useState(0)
+
+  const selectTab = (id) => {
+    const from = ALL_TABS.findIndex((tab) => tab.id === activeTab)
+    const to = ALL_TABS.findIndex((tab) => tab.id === id)
+    setTabDirection(to > from ? 1 : -1)
+    setActiveTab(id)
+  }
 
   // --- Read-only mode: loading state ---
   if (isReadOnly && isRecordLoading) {
@@ -172,7 +192,7 @@ export default function ResultsPage() {
             <button
               key={tab.id}
               type="button"
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => selectTab(tab.id)}
               className={`flex items-center gap-2 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${
                 isActive
                   ? 'border-emerald-500 text-emerald-700'
@@ -187,35 +207,49 @@ export default function ResultsPage() {
       </div>
 
       {/* Tab content */}
-      {effectiveTab === 'overview' && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <FutureSelfCard futureSelf={resolvedResult.futureSelf} />
-          <Timeline timeline={resolvedResult.timeline} />
-          <div className="lg:col-span-2">
-            <ProgressChart timeline={resolvedResult.timeline} />
-          </div>
-        </div>
-      )}
+      <AnimatePresence mode="wait" custom={tabDirection} initial={false}>
+        <motion.div
+          key={effectiveTab}
+          custom={tabDirection}
+          variants={tabVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+        >
+          {effectiveTab === 'overview' && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <FutureSelfCard futureSelf={resolvedResult.futureSelf} />
+              <Timeline timeline={resolvedResult.timeline} />
+              <div className="lg:col-span-2">
+                <ProgressChart timeline={resolvedResult.timeline} />
+              </div>
+            </div>
+          )}
 
-      {effectiveTab === 'insights' && (
-        <div className="grid gap-6 lg:grid-cols-2">
-          <InsightsPanel
-            insights={resolvedResult.insights}
-            strongestFactor={resolvedResult.strongestFactor}
-            weakestFactor={resolvedResult.weakestFactor}
-          />
-          <div className="flex flex-col gap-6">
-            <RecommendationsList recommendations={resolvedResult.recommendations} />
-            <RiskRadar risks={resolvedResult.risks} />
-          </div>
-        </div>
-      )}
+          {effectiveTab === 'insights' && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <InsightsPanel
+                insights={resolvedResult.insights}
+                strongestFactor={resolvedResult.strongestFactor}
+                weakestFactor={resolvedResult.weakestFactor}
+              />
+              <div className="flex flex-col gap-6">
+                <RecommendationsList recommendations={resolvedResult.recommendations} />
+                <RiskRadar risks={resolvedResult.risks} />
+              </div>
+            </div>
+          )}
 
-      {/* What-If tab only exists in active mode (tabs array already
-          excludes it when isReadOnly, this is defense in depth) */}
-      {!isReadOnly && effectiveTab === 'whatif' && <WhatIfPanel />}
+          {/* What-If tab only exists in active mode (tabs array already
+              excludes it when isReadOnly, this is defense in depth) */}
+          {!isReadOnly && effectiveTab === 'whatif' && <WhatIfPanel />}
 
-      {effectiveTab === 'narrative' && <NarrativeReport narrative={resolvedResult.narrative} />}
+          {effectiveTab === 'narrative' && (
+            <NarrativeReport narrative={resolvedResult.narrative} />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </PageContainer>
   )
 }

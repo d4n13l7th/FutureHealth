@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { MessageSquare, X, Bot, Loader2 } from 'lucide-react'
+import { MessageSquare, X, Bot } from 'lucide-react'
 import { useChatbot } from '../../hooks/useChatbot.js'
 import ChatBubble from './ChatBubble.jsx'
 import ChatInput from './ChatInput.jsx'
@@ -48,21 +48,27 @@ export default function ChatWidget() {
 
   if (!isOpen) {
     return (
-      <div className="fixed bottom-6 right-6 z-50">
-        <button
-          type="button"
-          onClick={() => setIsOpen(true)}
-          className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 transition-transform hover:scale-105"
-          aria-label="Buka Asisten AI FutureHealth"
-        >
-          <MessageSquare size={24} />
-        </button>
+      <div className="fixed bottom-24 right-6 z-50 sm:bottom-6">
+        <div className="relative">
+          <span
+            className="absolute inset-0 rounded-full bg-emerald-400 animate-pulse-ring"
+            aria-hidden="true"
+          />
+          <button
+            type="button"
+            onClick={() => setIsOpen(true)}
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-95"
+            aria-label="Buka Asisten AI FutureHealth"
+          >
+            <MessageSquare size={24} />
+          </button>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex h-[500px] max-h-[80vh] w-80 flex-col overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-2xl sm:w-96">
+    <div className="fixed inset-x-0 bottom-0 z-50 flex h-full w-full flex-col overflow-hidden border border-slate-100 bg-white shadow-2xl animate-slide-in-right sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[500px] sm:max-h-[80vh] sm:w-96 sm:rounded-2xl">
       {/* Header */}
       <div className="flex items-center justify-between bg-gradient-to-r from-emerald-500 to-sky-500 px-4 py-3 text-white">
         <div className="flex items-center gap-2">
@@ -83,17 +89,24 @@ export default function ChatWidget() {
       <div className="flex-1 overflow-y-auto px-4 py-4">
         <div className="flex flex-col gap-3">
           {messages.map((message) => (
-            <ChatBubble key={message.id} message={message} />
+            <div key={message.id} className="animate-bubble-in">
+              <ChatBubble message={message} />
+            </div>
           ))}
 
           {isTyping && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 animate-fade-in">
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500">
                 <Bot size={16} />
               </div>
-              <div className="flex items-center gap-2 rounded-2xl bg-slate-100 px-4 py-2 text-sm text-slate-400">
-                <Loader2 size={14} className="animate-spin" />
-                Mengetik...
+              <div
+                className="flex items-center gap-1.5 rounded-2xl bg-slate-100 px-4 py-3"
+                role="status"
+                aria-label="Asisten sedang mengetik"
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-typing-dot" />
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-typing-dot" />
+                <span className="h-1.5 w-1.5 rounded-full bg-slate-400 animate-typing-dot" />
               </div>
             </div>
           )}

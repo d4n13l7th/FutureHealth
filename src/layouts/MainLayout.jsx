@@ -4,6 +4,8 @@ import { Loader2 } from 'lucide-react'
 import Navbar from '../components/layout/Navbar.jsx'
 import Footer from '../components/layout/Footer.jsx'
 import ChatWidget from '../components/chatbot/ChatWidget.jsx'
+import MobileTabBar from '../components/layout/MobileTabBar.jsx'
+import { useAuth } from '../context/AuthContext.jsx'
 
 /**
  * RouteFallback
@@ -44,8 +46,10 @@ function RouteFallback() {
  * ----------------------------------------------------------------
  */
 export default function MainLayout() {
+  const { user } = useAuth()
+
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50">
+    <div className="flex min-h-screen flex-col bg-slate-50 pb-16 md:pb-0">
       <Navbar />
 
       <main className="flex-grow">
@@ -55,6 +59,8 @@ export default function MainLayout() {
       </main>
 
       <Footer />
+
+      {user && <MobileTabBar />}
 
       <ChatWidget />
     </div>
