@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Calendar, LogOut, AlertCircle, Loader2, Pencil, X, Image } from 'lucide-react'
+import { User, Mail, Calendar, LogOut, AlertCircle, Loader2, Pencil, X, Camera, CheckCircle } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { getProfile, updateProfile } from '../services/profileService.js'
@@ -80,7 +80,7 @@ export default function ProfilePage() {
   const [logoutError, setLogoutError] = useState(null)
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
-  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState(null)
 
 
   // Load the health profile once on mount.
@@ -209,7 +209,7 @@ export default function ProfilePage() {
     setAvatarFile(file)
   }
 
-  async function handleAvatarUpload() {
+  async function _handleAvatarUpload() {
     if (!avatarFile) return
 
     setIsSaving(true)
@@ -219,7 +219,7 @@ export default function ProfilePage() {
       const formData = new FormData()
       formData.append('avatar', avatarFile)
 
-      const { data, error } = await fetch('/profile/avatar', {
+      const { error } = await fetch('/profile/avatar', {
         method: 'POST',
         body: formData,
         credentials: 'include',
