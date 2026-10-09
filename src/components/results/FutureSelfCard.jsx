@@ -1,86 +1,117 @@
-import { Scale, Dumbbell, Moon, HeartPulse, Activity, Sparkles } from 'lucide-react'
+import { Sparkles, UserRound, Scale, HeartPulse, Smile, Target } from 'lucide-react'
 
-/**
- * Stat field configuration: maps a `futureSelf` key to its display
- * label, icon, and an optional formatter for the raw value.
- * Defined outside the component so it isn't recreated on every
- * render.
- */
 const STAT_FIELDS = [
-  {
-    key: 'projectedWeight',
-    label: 'Berat Badan',
-    icon: Scale,
-    format: (value) => (value != null ? `${value} kg` : null),
-  },
-  {
-    key: 'fitness',
-    label: 'Kebugaran',
-    icon: Dumbbell,
-  },
-  {
-    key: 'sleepQuality',
-    label: 'Kualitas Tidur',
-    icon: Moon,
-  },
-  {
-    key: 'stressTrend',
-    label: 'Tingkat Stres',
-    icon: Activity,
-  },
-  {
-    key: 'bmiCategory',
-    label: 'Kategori BMI',
-    icon: HeartPulse,
-  },
-  {
-    key: 'overallWellbeing',
-    label: 'Kesejahteraan',
-    icon: Sparkles,
-  },
+  { key: 'age', label: 'Usia saat ini', icon: UserRound, format: (v) => v ?? FALLBACK_VALUE },
+  { key: 'weight', label: 'Berat badan', icon: Scale, format: (v) => (v ? `${v} kg` : FALLBACK_VALUE) },
+  { key: 'healthAge', label: 'Usia kesehatan', icon: HeartPulse, format: (v) => v ?? FALLBACK_VALUE },
+  { key: 'lifestyle', label: 'Gaya hidup', icon: Smile, format: (v) => v ?? FALLBACK_VALUE },
+  { key: 'goal', label: 'Target utama', icon: Target, format: (v) => v ?? FALLBACK_VALUE },
 ]
 
-const FALLBACK_VALUE = '-'
+const FALLBACK_VALUE = 'Belum tersedia'
 
 /**
- * FutureSelfCard
- * ----------------------------------------------------------------
- * Presentational summary card showing the user's projected future
- * self ("Diri Anda 12 Bulan Mendatang") — the `futureSelf` object
- * returned by simulationEngine.runSimulation().
- *
- * Renders a responsive grid (2 cols on mobile, 3 cols on sm+) of
- * labeled stats. Each field is read defensively via optional
- * chaining; missing values fall back to "-" so a partial or
- * malformed `futureSelf` never renders "undefined" or crashes.
- *
- * Purely presentational — no context, no hooks, no API calls.
- * ----------------------------------------------------------------
+ * Displays the user's projected future self summary derived from the
+ * simulation output. The card remains presentational and relies on
+ * `futureSelf` data populated by the simulation engine.
  */
-export default function FutureSelfCard({ futureSelf }) {
+export default function FutureSelfCard({ futureSelf, score }) {
+  const values = futureSelf ?? {}
+
+  const derivedScore = Number(score)
+  const tone = Number.isFinite(derivedScore)
+    ? derivedScore >= 80
+      ? 'high'
+      : derivedScore >= 60
+        ? 'med'
+        : 'low'
+    : 'high'
+
+  const palette = {
+    high: {
+      ring: '#FAF8F4',
+      arc: '#17543C',
+      dot: '#2E7D5B',
+      fill: '#DFEFE5',
+      stroke: '#2E7D5B',
+    },
+    med: {
+      ring: '#FAF8F4',
+      arc: '#B45309',
+      dot: '#F59E0B',
+      fill: '#FEF3C7',
+      stroke: '#F59E0B',
+    },
+    low: {
+      ring: '#FAF8F4',
+      arc: '#B91C1C',
+      dot: '#EF4444',
+      fill: '#FEE2E2',
+      stroke: '#EF4444',
+    },
+  }[tone]
+
   return (
     <div className="card">
-      <h3 className="font-semibold text-slate-900">Diri Anda 12 Bulan Mendatang</h3>
+      <div className="flex items-center gap-2">
+        <Sparkles size={18} className="text-emerald-600" />
+        <h3 className="text-lg font-semibold text-slate-900">Diri Anda di Masa Depan</h3>
+      </div>
 
-      <dl className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {STAT_FIELDS.map(({ key, label, icon: Icon, format }) => {
-          const rawValue = futureSelf?.[key]
-          const displayValue =
-            rawValue != null && rawValue !== ''
-              ? format
-                ? format(rawValue) ?? FALLBACK_VALUE
-                : rawValue
-              : FALLBACK_VALUE
+      <p className="mt-2 text-sm text-slate-500">
+        Proyeksi kesehatan berbasis pola hidup Anda saat ini, berikut langkah yang bisa mendekatkan Anda ke versi terbaik.
+      </p>
+
+      <div className="mt-6 flex justify-center">
+        <svg width="160" height="160" viewBox="0 0 160 160">
+          <circle cx="80" cy="80" r="72" fill={palette.ring} />
+          <path
+            d="M 16 80 A 64 64 0 1 1 144 80"
+            fill="none"
+            stroke={palette.arc}
+            strokeWidth="8"
+            strokeLinecap="round"
+            strokeDasharray="8 6"
+          />
+          <circle cx="144" cy="80" r="6" fill={palette.dot} />
+          <path
+            d="M 64 108 C 56 100, 52 90, 52 80 C 52 62, 64 48, 80 48 C 96 48, 108 62, 108 80 C 108 90, 104 100, 96 108"
+            fill={palette.fill}
+            stroke={palette.stroke}
+            strokeWidth="4"
+            strokeLinecap="round"
+          />
+          <path
+            d="M 48 120 L 40 136 L 56 132 Z"
+            fill={palette.arc}
+            opacity="0.25"
+          />
+          <path
+            d="M 60 52 L 56 40 L 70 44 Z"
+            fill={palette.arc}
+            opacity="0.25"
+          />
+          <circle cx="80" cy="72" r="14" fill={palette.stroke} opacity="0.12" />
+          <circle cx="80" cy="70" r="10" fill={palette.stroke} />
+          <rect x="72" y="80" width="16" height="12" rx="6" fill={palette.stroke} />
+        </svg>
+      </div>
+
+      <dl className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+        {STAT_FIELDS.map((field) => {
+          const value = values[field.key]
+          const formatted = field.format(value)
+          const Icon = field.icon
 
           return (
-            <div key={key} className="flex items-start gap-2.5">
-              <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
-                <Icon size={16} />
+            <div key={field.key} className="rounded-xl border border-slate-100 bg-white p-4">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-50">
+                  <Icon size={16} className="text-emerald-600" />
+                </div>
+                <dt className="text-xs font-medium text-slate-500">{field.label}</dt>
               </div>
-              <div>
-                <dt className="text-xs font-medium text-slate-400">{label}</dt>
-                <dd className="font-medium text-slate-900">{displayValue}</dd>
-              </div>
+              <dd className="mt-2 text-sm font-semibold text-slate-900">{formatted}</dd>
             </div>
           )
         })}
