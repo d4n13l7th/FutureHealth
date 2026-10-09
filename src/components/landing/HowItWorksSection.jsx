@@ -38,7 +38,7 @@ export default function HowItWorksSection() {
                 x2="1000"
                 y1="1"
                 y2="1"
-                stroke="#A7F3D0"
+                stroke="#C0DDCB"
                 strokeWidth="2"
                 strokeDasharray="6 8"
                 strokeLinecap="round"
@@ -52,7 +52,7 @@ export default function HowItWorksSection() {
               const Icon = step.icon
               return (
                 <div key={step.title} className="flex flex-col items-center text-center">
-                  <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-sky-500 text-sm font-bold text-white shadow-glow">
+                  <div className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-600 text-sm font-bold text-white shadow-glow">
                     {index + 1}
                   </div>
                   <div className="card card-interactive mt-6 w-full p-5">

@@ -15,7 +15,7 @@ const CIRCUMFERENCE = 2 * Math.PI * RADIUS
  */
 function getScoreTheme(score) {
   if (score >= 80) {
-    return { stroke: '#10B981', text: 'text-emerald-500' } // emerald
+    return { stroke: '#2E7D5B', text: 'text-emerald-500' } // emerald
   }
   if (score >= 60) {
     return { stroke: '#FBBF24', text: 'text-amber-500' } // amber
@@ -94,7 +94,7 @@ export default function HealthScoreCircle({ score, category }) {
             cy={SIZE / 2}
             r={RADIUS}
             fill="none"
-            stroke="#F1F5F9"
+            stroke="#F3EFE7"
             strokeWidth={STROKE_WIDTH}
           />
           {/* Animated progress ring */}

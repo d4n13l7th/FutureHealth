@@ -13,11 +13,11 @@ export default function CTASection() {
   return (
     <section className="py-16 sm:py-24">
       <PageContainer>
-        <div className="card flex flex-col items-center gap-6 overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 to-sky-500 px-6 py-12 text-center text-white shadow-glow-lg sm:px-12">
+        <div className="card flex flex-col items-center gap-6 overflow-hidden rounded-3xl bg-emerald-700 px-6 py-12 text-center text-white shadow-glow-lg sm:px-12">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-sm">
             <HeartPulse size={28} />
           </span>
-          <h2 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Siap melihat dirimu di masa depan?
           </h2>
           <p className="max-w-md text-emerald-50">

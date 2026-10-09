@@ -9,7 +9,7 @@ import {
 } from 'recharts'
 import { Flag } from 'lucide-react'
 
-const EMERALD = '#10b981'
+const EMERALD = '#2E7D5B'
 
 /**
  * CustomTooltip
@@ -41,7 +41,7 @@ function CustomTooltip({ active, payload, label }) {
  *
  * - X-axis: milestone `label` (e.g. "Bulan 3")
  * - Y-axis: fixed domain [0, 100] since score is a strict percentage
- * - Line styled in emerald (#10b981), smooth, with visible dots
+ * - Line styled in forest green (#2E7D5B), smooth, with visible dots
  * - Minimal CartesianGrid (horizontal only) for a clean look
  * - Custom tooltip matching the slate/emerald design system
  *
@@ -71,21 +71,21 @@ export default function ProgressChart({ timeline }) {
       <div className="mt-4 h-64 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={timeline} margin={{ top: 8, right: 12, bottom: 0, left: -12 }}>
-            <CartesianGrid vertical={false} stroke="#F1F5F9" />
+            <CartesianGrid vertical={false} stroke="#F3EFE7" />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 12, fill: '#94A3B8' }}
-              axisLine={{ stroke: '#F1F5F9' }}
+              tick={{ fontSize: 12, fill: '#A79B89' }}
+              axisLine={{ stroke: '#F3EFE7' }}
               tickLine={false}
             />
             <YAxis
               domain={[0, 100]}
-              tick={{ fontSize: 12, fill: '#94A3B8' }}
+              tick={{ fontSize: 12, fill: '#A79B89' }}
               axisLine={false}
               tickLine={false}
               width={32}
             />
-            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#E2E8F0' }} />
+            <Tooltip content={<CustomTooltip />} cursor={{ stroke: '#E6DFD3' }} />
             <Line
               type="monotone"
               dataKey="score"

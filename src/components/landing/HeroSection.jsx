@@ -17,7 +17,7 @@ export default function HeroSection() {
     <section className="relative overflow-hidden py-16 sm:py-24">
       {/* Animated wellness mesh backdrop */}
       <div className="mesh-bg animate-mesh absolute inset-0 -z-10" aria-hidden="true" />
-      <div className="absolute inset-x-0 top-0 -z-10 h-40 bg-gradient-to-b from-white to-transparent" aria-hidden="true" />
+      <div className="absolute inset-x-0 top-0 -z-10 h-40 bg-gradient-to-b from-slate-50 to-transparent" aria-hidden="true" />
 
       <PageContainer>
         <div className="grid items-center gap-12 lg:grid-cols-2">
@@ -27,7 +27,7 @@ export default function HeroSection() {
               <Sparkles size={14} />
               Simulasi Kesehatan Masa Depan
             </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">
+            <h1 className="font-display text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
               Meet Your <span className="text-gradient">Future Health</span>
             </h1>
             <p className="mx-auto mt-4 max-w-md text-lg text-slate-500 lg:mx-0">
@@ -55,8 +55,8 @@ export default function HeroSection() {
             >
               <defs>
                 <linearGradient id="hero-timeline" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0" stopColor="#CBD5E1" />
-                  <stop offset="1" stopColor="#0EA5E9" />
+                  <stop offset="0" stopColor="#CFC5B4" />
+                  <stop offset="1" stopColor="#3D736D" />
                 </linearGradient>
               </defs>
               <line
@@ -96,7 +96,7 @@ export default function HeroSection() {
 
             {/* Future self */}
             <div
-              className="card animate-float flex w-32 flex-col items-center gap-3 border-emerald-200 bg-gradient-to-br from-emerald-50 to-sky-50 p-5 shadow-glow sm:w-40"
+              className="card animate-float flex w-32 flex-col items-center gap-3 border-emerald-200 bg-emerald-50 p-5 shadow-glow sm:w-40"
               style={{ animationDelay: '1.4s' }}
             >
               <span className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl sm:h-20 sm:w-20">

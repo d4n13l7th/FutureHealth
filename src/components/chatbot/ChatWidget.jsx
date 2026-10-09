@@ -57,7 +57,7 @@ export default function ChatWidget() {
           <button
             type="button"
             onClick={() => setIsOpen(true)}
-            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-emerald-500 to-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-95"
+            className="relative flex h-14 w-14 items-center justify-center rounded-full bg-emerald-600 text-white shadow-lg shadow-emerald-500/30 transition-transform hover:scale-105 active:scale-95"
             aria-label="Buka Asisten AI FutureHealth"
           >
             <MessageSquare size={24} />
@@ -70,7 +70,7 @@ export default function ChatWidget() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-50 flex h-full w-full flex-col overflow-hidden border border-slate-100 bg-white shadow-2xl animate-slide-in-right sm:inset-x-auto sm:bottom-6 sm:right-6 sm:h-[500px] sm:max-h-[80vh] sm:w-96 sm:rounded-2xl">
       {/* Header */}
-      <div className="flex items-center justify-between bg-gradient-to-r from-emerald-500 to-sky-500 px-4 py-3 text-white">
+      <div className="flex items-center justify-between bg-emerald-700 px-4 py-3 text-white">
         <div className="flex items-center gap-2">
           <Bot size={18} />
           <span className="font-semibold">Asisten AI FutureHealth</span>

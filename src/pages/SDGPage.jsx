@@ -45,12 +45,12 @@ export default function SDGPage() {
   return (
     <PageContainer className="py-12">
       {/* Hero */}
-      <section className="overflow-hidden rounded-3xl bg-gradient-to-br from-emerald-500 to-sky-500 px-6 py-12 text-center text-white sm:px-12 sm:py-16">
+      <section className="overflow-hidden rounded-3xl bg-emerald-700 px-6 py-12 text-center text-white sm:px-12 sm:py-16">
         <div className="mx-auto flex max-w-2xl flex-col items-center gap-4">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-white/15">
             <Globe size={28} />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
             Mendukung SDG 3: Kehidupan Sehat dan Sejahtera
           </h1>
           <p className="leading-relaxed text-emerald-50">

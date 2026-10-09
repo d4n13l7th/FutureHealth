@@ -31,7 +31,7 @@ function getDisplayName(user) {
  *
  * Displays a small "Selamat datang kembali," line, a large
  * personalized heading ("{displayName} 👋"), and a motivating
- * subtitle, on a vibrant emerald-to-sky gradient background.
+ * subtitle, on a deep forest-green card background.
  *
  * Extremely defensive: `user`, `user.user_metadata`, `full_name`,
  * and `email` may all be missing — display name always falls back
@@ -45,7 +45,7 @@ export default function WelcomeCard({ user }) {
   const displayName = getDisplayName(user)
 
   return (
-    <div className="card bg-gradient-to-br from-emerald-500 to-sky-500 text-white">
+    <div className="card bg-emerald-700 text-white">
       <p className="text-sm font-medium text-emerald-50">Selamat datang kembali,</p>
       <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
         {displayName} 👋

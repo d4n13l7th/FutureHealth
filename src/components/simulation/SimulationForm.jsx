@@ -530,7 +530,7 @@ export default function SimulationForm({ initialData = {}, onSubmit, isSubmittin
 
         <div className="h-2 overflow-hidden rounded-full bg-slate-100">
           <div
-            className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-sky-500 transition-[width] duration-500 ease-out"
+            className="h-full rounded-full bg-emerald-500 transition-[width] duration-500 ease-out"
             style={{ width: `${((step + 1) / WIZARD_STEPS.length) * 100}%` }}
           />
         </div>

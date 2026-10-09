@@ -8,9 +8,9 @@
  */
 
 @layer components {
-  /* Primary action — emerald→sky gradient (featured / CTA) */
+  /* Primary action — solid forest green (featured / CTA) */
   .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-emerald-500 to-sky-500 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-500/25 transition-all hover:from-emerald-600 hover:to-sky-600 hover:shadow-emerald-500/40 active:scale-[0.98];
+    @apply inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-6 py-3 font-semibold text-white shadow-lg shadow-emerald-600/25 transition-all hover:bg-emerald-700 hover:shadow-emerald-600/40 active:scale-[0.98];
   }
 
   .btn-secondary {
@@ -24,7 +24,7 @@
   /* Card — wellness-meets-tech: soft shadow, no heavy elevation */
   .card {
     @apply rounded-3xl border border-slate-100 bg-white p-6 transition-shadow duration-300;
-    box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+    box-shadow: 0 4px 24px rgba(36, 32, 25, 0.06);
   }
 
   /* Interactive card — lift + emerald glow on hover */
@@ -36,22 +36,21 @@
   }
   .card-interactive:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 48px rgba(16, 185, 129, 0.12);
-    border-color: rgb(209 250 229);
+    box-shadow: 0 12px 48px rgba(46, 125, 91, 0.12);
+    border-color: rgb(192 221 203);
   }
 
-  /* Emerald→sky gradient text for headlines */
+  /* Solid forest-green headline accent */
   .text-gradient {
-    @apply bg-gradient-to-r from-emerald-500 to-sky-500 bg-clip-text text-transparent;
+    @apply text-emerald-600;
   }
 
   /* Animated wellness mesh backdrop (landing hero, CTA bands) */
   .mesh-bg {
     background:
-      radial-gradient(at 18% 28%, rgba(16, 185, 129, 0.10) 0, transparent 55%),
-      radial-gradient(at 82% 18%, rgba(14, 165, 233, 0.10) 0, transparent 55%),
-      radial-gradient(at 50% 82%, rgba(251, 191, 36, 0.07) 0, transparent 50%);
-    background-color: #f8fafc;
+      radial-gradient(at 20% 25%, rgba(46, 125, 91, 0.06) 0, transparent 55%),
+      radial-gradient(at 80% 20%, rgba(61, 115, 109, 0.04) 0, transparent 55%);
+    background-color: #faf8f4;
   }
 
   .input-field {
@@ -63,7 +62,7 @@
   }
 
   .section-title {
-    @apply text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl;
+    @apply font-display text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl;
   }
 
   .pill {
