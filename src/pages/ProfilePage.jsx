@@ -82,7 +82,6 @@ export default function ProfilePage() {
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
 
-  const [logoutError, setLogoutError] = useState(null)
 
   // Load the health profile once on mount.
   useEffect(() => {
@@ -204,7 +203,7 @@ export default function ProfilePage() {
 
     const reader = new FileReader()
     reader.onload = (e) => {
-      setAvatarPreview(e.target?.result as string)
+      setAvatarPreview(e.target?.result)
     }
     reader.readAsDataURL(file)
     setAvatarFile(file)
