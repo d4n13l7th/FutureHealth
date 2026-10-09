@@ -93,9 +93,10 @@ class ApiError extends Error {
   }
 }
 
-function clientUser(id, email, fullName, avatarUrl) {
+function clientUser(id, email, fullName, avatarUrl, createdAt) {
   const user = { id, email, user_metadata: { full_name: fullName } };
   if (avatarUrl) user.avatar_url = avatarUrl;
+  if (createdAt) user.created_at = createdAt;
   return user;
 }
 
@@ -116,8 +117,7 @@ function html(content, status = 200) {
 }
 
 // -------------------------------------------------------------------
-// Password hashing (PBKDF2-SHA256)
-// Stored format: "pbkdf2$<iterations>$<saltB64>$<hashHex>"
+// HTML helpers (used by the Google OAuth popup pages)
 // -------------------------------------------------------------------
 const PBKDF2_ITERATIONS = 60000;
 
@@ -580,7 +580,9 @@ async function login({ request, env }) {
 
 async function me(ctx) {
   const session = await requireUser(ctx);
-  return json({ data: { user: clientUser(session.user.id, session.user.email, session.user.fullName) } });
+  const userRow = await ctx.env[DB_NAME].prepare('SELECT created_at FROM users WHERE id = ?').bind(session.userId).first();
+  const createdAt = userRow?.created_at || null;
+  return json({ data: { user: clientUser(session.user.id, session.user.email, session.user.fullName, createdAt) } });
 }
 
 async function logout({ request, env }) {
@@ -618,6 +620,7 @@ async function putProfile(ctx) {
     gender: read('gender') ?? existing?.gender ?? null,
     height_cm: read('height_cm') ?? existing?.height_cm ?? null,
     weight_kg: read('weight_kg') ?? existing?.weight_kg ?? null,
+    avatar_url: read('avatar_url') ?? existing?.avatar_url ?? session.user.avatar_url ?? null,
   };
 
   const now = new Date().toISOString();
@@ -625,14 +628,15 @@ async function putProfile(ctx) {
 
   await ctx.env[DB_NAME]
     .prepare(
-      `INSERT INTO profiles (id, full_name, age, gender, height_cm, weight_kg, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO profiles (id, full_name, age, gender, height_cm, weight_kg, avatar_url, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (id) DO UPDATE SET
          full_name = excluded.full_name,
          age = excluded.age,
          gender = excluded.gender,
          height_cm = excluded.height_cm,
          weight_kg = excluded.weight_kg,
+         avatar_url = excluded.avatar_url,
          updated_at = excluded.updated_at`
     )
     .bind(
@@ -642,6 +646,7 @@ async function putProfile(ctx) {
       merged.gender,
       merged.height_cm,
       merged.weight_kg,
+      merged.avatar_url,
       createdAt,
       now
     )
@@ -656,6 +661,42 @@ async function putProfile(ctx) {
   }
 
   return json({ data: { id: session.userId, ...merged, created_at: createdAt, updated_at: now } });
+}
+
+// -------------------------------------------------------------------
+// Avatar upload
+// -------------------------------------------------------------------
+
+async function uploadAvatar(ctx) {
+  const session = await requireUser(ctx);
+  const formData = await ctx.request.formData()
+  const file = formData.get('avatar') as File | null
+
+  if (!file) {
+    return json({ error: 'File gambar wajib diisi.' }, 400)
+  }
+
+  const supportedFormats = ['image/png', 'image/jpeg', 'image/webp']
+  if (!supportedFormats.includes(file.type)) {
+    return json({ error: 'Format foto tidak didukung. Gunakan PNG, JPEG, atau WebP.' }, 400)
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    return json({ error: 'Foto terlalu besar. Maksimal 5MB.' }, 400)
+  }
+
+  const bytes = await file.arrayBuffer()
+  const base64 = btoa(
+    String.fromCharCode(...new Uint8Array(bytes))
+  )
+  const dataUrl = `data:${file.type};base64,${base64}`
+
+  await ctx.env[DB_NAME]
+    .prepare('UPDATE users SET avatar_url = ? WHERE id = ?')
+    .bind(dataUrl, session.userId)
+    .run()
+
+  return json({ data: { avatar_url: dataUrl } })
 }
 
 async function listAchievements(ctx) {
@@ -760,6 +801,7 @@ async function route(ctx) {
   if (path === '/auth/google/callback' && method === 'GET') return googleAuthCallback(ctx);
   if (path === '/profile' && method === 'GET') return getProfile(ctx);
   if (path === '/profile' && method === 'PUT') return putProfile(ctx);
+  if (path === '/profile/avatar' && method === 'POST') return uploadAvatar(ctx);
   if (path === '/achievements' && method === 'GET') return listAchievements(ctx);
   if (path === '/achievements' && method === 'PUT') return putAchievements(ctx);
   if (path === '/simulations' && method === 'POST') return createSimulation(ctx);

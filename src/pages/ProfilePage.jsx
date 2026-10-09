@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { User, Mail, Calendar, LogOut, AlertCircle, Loader2, Pencil, X } from 'lucide-react'
+import { User, Mail, Calendar, LogOut, AlertCircle, Loader2, Pencil, X, Image } from 'lucide-react'
 import { useAuth } from '../context/AuthContext.jsx'
 import { useToast } from '../context/ToastContext.jsx'
 import { getProfile, updateProfile } from '../services/profileService.js'
@@ -77,6 +77,11 @@ export default function ProfilePage() {
   const [weightField, setWeightField] = useState('')
 
   const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const [logoutError, setLogoutError] = useState(null)
+
+  const [avatarFile, setAvatarFile] = useState<File | null>(null)
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
+
   const [logoutError, setLogoutError] = useState(null)
 
   // Load the health profile once on mount.
@@ -177,6 +182,70 @@ export default function ProfilePage() {
     }
   }
 
+  const supportedFormats = ['image/png', 'image/jpeg', 'image/webp']
+
+  function handleAvatarFileChange(event) {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    if (!supportedFormats.includes(file.type)) {
+      addToast('Format foto tidak didukung. Gunakan PNG, JPEG, atau WebP.', 'error')
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      return
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      addToast('Foto terlalu besar. Maksimal 5MB.', 'error')
+      setAvatarFile(null)
+      setAvatarPreview(null)
+      return
+    }
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setAvatarPreview(e.target?.result as string)
+    }
+    reader.readAsDataURL(file)
+    setAvatarFile(file)
+  }
+
+  async function handleAvatarUpload() {
+    if (!avatarFile) return
+
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
+      const formData = new FormData()
+      formData.append('avatar', avatarFile)
+
+      const { data, error } = await fetch('/profile/avatar', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      })
+
+      if (error) throw new Error(error.message)
+
+      setAvatarPreview(null)
+      setAvatarFile(null)
+      addToast('Foto profil berhasil diunggah.', 'success')
+
+      getProfile().then(({ data, error }) => {
+        if (!error && data?.avatar_url) {
+          setAvatarPreview(data.avatar_url)
+        }
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Terjadi kesalahan tak terduga.'
+      addToast(message, 'error')
+      setSaveError(message)
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
   return (
     <PageContainer className="py-12">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-6">
@@ -191,8 +260,34 @@ export default function ProfilePage() {
         {/* Profile details card */}
         <div className="card">
           <div className="flex items-center gap-4">
-            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-emerald-500">
-              <User size={28} />
+            <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full relative bg-emerald-50 text-emerald-500">
+              {avatarPreview ? (
+                <img
+                  src={avatarPreview}
+                  alt="foto profil"
+                  className="rounded-full w-full h-full object-cover"
+                />
+              ) : (
+                <User size={28} />
+              )}
+              {avatarFile ? (
+                <div className="absolute -bottom-1 -right-1 bg-green-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                  <CheckCircle size={12} />
+                </div>
+              ) : null}
+              <input
+                type="file"
+                accept="image/png, image/jpeg, image/webp"
+                onChange={handleAvatarFileChange}
+                className="hidden"
+                id="avatar-upload"
+              />
+              <label
+                htmlFor="avatar-upload"
+                className="absolute -bottom-1 -right-1 bg-emerald-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center"
+              >
+                <Camera size={16} />
+              </label>
             </div>
             <div className="min-w-0">
               <h2 className="truncate text-lg font-semibold text-slate-900">{fullName}</h2>
